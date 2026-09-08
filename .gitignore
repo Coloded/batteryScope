@@ -1,0 +1,14 @@
+.build/
+dist/*
+!dist/*.dmg
+.DS_Store
+._*
+.build-dependencies/
+*.sqlite
+*.sqlite-*
+*.key
+*.pem
+*.p12
+*.p8
+.env*
+__pycache__/

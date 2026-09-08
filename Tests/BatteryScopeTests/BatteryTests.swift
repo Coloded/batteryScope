@@ -1,0 +1,176 @@
+import Foundation
+
+@main struct BatteryTests {
+    static func main() throws {
+        let suite = BatteryTests()
+        suite.testModernMacDoesNotTreatPercentAsMilliampHours()
+        suite.testLegacyMacCapacity()
+        suite.testMissingAndZeroCapacityDoNotInventHealth()
+        suite.testUnsignedNegativeCurrent()
+        suite.testRawPercentAndNestedCapacity()
+        suite.testUnknownTimeAndTemperature()
+        suite.testCSVQuotesAndMissingValues()
+        suite.testReportEscapesDeviceNames()
+        try suite.testHistoryRoundTrip()
+        suite.testLiveMacReadIsSafeWithoutBattery()
+        suite.testMobileBasicSurvivesMissingDiagnostics()
+        suite.testMobileRealisticDiagnostics()
+        suite.testCachedAirPodsAreNotLive()
+        suite.testHIDAddressMatching()
+        suite.testComponentReport()
+        try suite.testOldHistoryCompatibility()
+        try suite.testSQLiteMigrationAndReopen()
+        try suite.testSQLiteBadLegacyPreserved()
+        try suite.testSQLiteTechnicalCache()
+        suite.testTechnicalFieldsExcludeSubscriberData()
+        print("PASS: 20 tests (Mac, mobile, accessories, SQLite migration/reopen, technical data, exports)")
+        if CommandLine.arguments.contains("--live-devices") {
+            let phones = DeviceReader.mobile(network: true)
+            XCTAssertTrue(phones.messages.isEmpty)
+            XCTAssertTrue(phones.devices.contains { $0.model.hasPrefix("iPhone") && $0.percent != nil && $0.health != nil })
+            XCTAssertEqual(Set(phones.devices.map(\.id)).count, phones.devices.count)
+            for b in phones.devices { print("LIVE: \(b.model) \(b.connection), charge \(b.value(b.percent)), cycles \(b.value(b.cycles)), health \(b.value(b.health, digits: 1))") }
+            if let phone = phones.devices.first(where: { $0.model.hasPrefix("iPhone") }) {
+                let specs = TechnicalReader.read(phone)
+                XCTAssertTrue(specs.sections["Аппаратная платформа, ОС и прошивки"]?.isEmpty == false)
+                print("TECHNICAL: \(specs.sections.count) sections, \(specs.sections.values.reduce(0) { $0 + $1.count }) fields")
+            }
+            let peripherals = DeviceReader.accessories()
+            XCTAssertTrue(peripherals.messages.isEmpty)
+            for b in peripherals.devices { print("ACCESSORY: \(b.model), live \(b.isLive), charge \(b.value(b.percent))") }
+        }
+    }
+    func parse(_ values: [String: Any]) -> Battery { BatteryParser.parse(values, id: "mac", name: "Test", model: "MacBook", connection: "Этот Mac") }
+    func testModernMacDoesNotTreatPercentAsMilliampHours() {
+        let b = parse(["CurrentCapacity": 80, "MaxCapacity": 100, "AppleRawMaxCapacity": 4500, "DesignCapacity": 5000, "Temperature": 3012, "Voltage": 12000])
+        XCTAssertEqual(b.percent, 80); XCTAssertEqual(b.health, 90); XCTAssertEqual(b.temperature, 30.12); XCTAssertEqual(b.voltage, 12)
+    }
+    func testLegacyMacCapacity() {
+        let b = parse(["CurrentCapacity": 2000, "MaxCapacity": 4000, "DesignCapacity": 5000])
+        XCTAssertEqual(b.percent, 50); XCTAssertEqual(b.full, 4000); XCTAssertEqual(b.health, 80)
+    }
+    func testMissingAndZeroCapacityDoNotInventHealth() {
+        XCTAssertNil(parse([:]).health)
+        XCTAssertNil(parse(["MaxCapacity": 100, "DesignCapacity": 5000]).health)
+        let b = parse(["CurrentCapacity": 0, "MaxCapacity": 0, "DesignCapacity": 0])
+        XCTAssertNil(b.percent); XCTAssertNil(b.health)
+    }
+    func testUnsignedNegativeCurrent() {
+        XCTAssertEqual(BatteryParser.signedCurrent(NSNumber(value: UInt64.max - 499)), -500)
+        let b = parse(["Amperage": NSNumber(value: UInt64.max - 499), "Voltage": 12000])
+        XCTAssertEqual(b.watts, -6)
+    }
+    func testRawPercentAndNestedCapacity() {
+        let b = parse(["AppleRawCurrentCapacity": 2000, "BatteryData": ["NominalChargeCapacity": 4000, "DesignCapacity": 5000, "CycleCount": 100]])
+        XCTAssertEqual(b.percent, 50); XCTAssertEqual(b.health, 80); XCTAssertEqual(b.cycles, 100)
+    }
+    func testUnknownTimeAndTemperature() {
+        let b = parse(["TimeRemaining": 65535, "Temperature": 0])
+        XCTAssertNil(b.minutes); XCTAssertNil(b.temperature)
+    }
+    func testCSVQuotesAndMissingValues() {
+        var b = parse([:]); b.name = "Mac, \"Work\"\nDesk"
+        let csv = Export.csv([Sample(battery: b)])
+        XCTAssertTrue(csv.contains("\"Mac, \"\"Work\"\"\nDesk\""))
+        XCTAssertFalse(csv.contains("nan")); XCTAssertFalse(csv.contains("Optional"))
+    }
+    func testReportEscapesDeviceNames() {
+        var b = parse([:]); b.name = "<script>alert(1)</script>"
+        let report = Export.report(b, template: Export.template)
+        XCTAssertTrue(report.contains("&lt;script&gt;")); XCTAssertFalse(report.contains("<script>")); XCTAssertFalse(report.contains("{{rows}}"))
+    }
+    func testHistoryRoundTrip() throws {
+        let sample = Sample(battery: parse(["CycleCount": 99]))
+        let decoded = try JSONDecoder().decode([Sample].self, from: JSONEncoder().encode([sample]))
+        XCTAssertEqual(decoded.first?.battery.cycles, 99); XCTAssertEqual(decoded.first?.id, sample.id)
+    }
+    func testLiveMacReadIsSafeWithoutBattery() {
+        let b = BatteryReader.mac()
+        XCTAssertFalse(b.model.isEmpty)
+        if b.full == nil || b.full == 0 { XCTAssertNil(b.percent); XCTAssertFalse(b.note.isEmpty) }
+    }
+    func testMobileBasicSurvivesMissingDiagnostics() {
+        let b = DeviceParser.mobile(id: "test", info: ["ProductType": "iPad13,1"], basic: ["BatteryCurrentCapacity": 44, "BatteryIsCharging": true], diagnostics: [:], network: true)
+        XCTAssertEqual(b.percent, 44); XCTAssertNil(b.health); XCTAssertTrue(b.charging == true); XCTAssertEqual(b.connection, "Wi-Fi")
+    }
+    func testMobileRealisticDiagnostics() {
+        let raw: [String: Any] = ["IORegistry": ["AppleRawMaxCapacity": 4677, "DesignCapacity": 4768, "CurrentCapacity": 62, "MaxCapacity": 100, "CycleCount": 283, "Temperature": 3909]]
+        let b = DeviceParser.mobile(id: "test", info: ["ProductType": "iPhone18,2"], basic: ["BatteryCurrentCapacity": 62], diagnostics: raw, network: false)
+        XCTAssertEqual(b.percent, 62); XCTAssertEqual(b.cycles, 283); XCTAssertEqual(b.full, 4677); XCTAssertEqual(b.temperature, 39.09)
+    }
+    func bluetoothFixture(live: Bool, name: String, type: String, fields: [String: Any] = [:]) -> [String: Any] {
+        var d: [String: Any] = ["device_address": "AA:BB:CC:DD:EE:FF", "device_vendorID": "0x004C", "device_minorType": type]
+        d.merge(fields, uniquingKeysWith: { _, new in new })
+        return ["SPBluetoothDataType": [[live ? "device_connected" : "device_not_connected": [[name: d]]]]]
+    }
+    func testCachedAirPodsAreNotLive() {
+        let json = bluetoothFixture(live: false, name: "AirPods", type: "Headphones", fields: ["device_batteryLevelCase": "18 %", "device_batteryLevelLeft": "100 %"])
+        let b = DeviceParser.bluetooth(json, hid: []).first!
+        XCTAssertFalse(b.isLive); XCTAssertNil(b.percent); XCTAssertEqual(b.components?["Футляр"], 18); XCTAssertEqual(b.state, "Нет свежих данных")
+    }
+    func testHIDAddressMatching() {
+        let json = bluetoothFixture(live: true, name: "Magic Keyboard", type: "Keyboard")
+        let b = DeviceParser.bluetooth(json, hid: [["DeviceAddress": "aa-bb-cc-dd-ee-ff", "BatteryPercent": 61]]).first!
+        XCTAssertEqual(b.percent, 61); XCTAssertTrue(b.isLive); XCTAssertNil(b.health)
+    }
+    func testComponentReport() {
+        var b = parse([:]); b.components = ["Футляр": 18]
+        XCTAssertTrue(Export.report(b, template: Export.template).contains("Футляр"))
+        XCTAssertTrue(Export.csv([Sample(battery: b)]).contains("18.0"))
+    }
+    func testOldHistoryCompatibility() throws {
+        let original = Sample(battery: parse(["CycleCount": 3]))
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as! [String: Any]
+        var battery = json["battery"] as! [String: Any]; battery.removeValue(forKey: "available"); battery.removeValue(forKey: "components"); json["battery"] = battery
+        let restored = try JSONDecoder().decode(Sample.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertTrue(restored.battery.isLive); XCTAssertEqual(restored.battery.cycles, 3)
+    }
+    func testSQLiteMigrationAndReopen() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let legacy = dir.appendingPathComponent("history.json"), path = dir.appendingPathComponent("test.sqlite")
+        let first = Sample(battery: parse(["CycleCount": 10])), next = Sample(battery: parse(["CycleCount": 11]))
+        let original = try JSONEncoder().encode([first]); try original.write(to: legacy)
+        do {
+            let db = try HistoryDatabase(url: path, legacyURL: legacy)
+            XCTAssertEqual(try db.load().count, 1)
+            try db.append(next); try db.append(next)
+            XCTAssertEqual(try db.load().count, 2)
+        }
+        let reopened = try HistoryDatabase(url: path, legacyURL: legacy)
+        XCTAssertEqual(try reopened.load().count, 2)
+        XCTAssertEqual(try Data(contentsOf: legacy), original)
+        XCTAssertEqual(Set(try reopened.load().map(\.id)), Set([first.id, next.id]))
+    }
+    func testSQLiteBadLegacyPreserved() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let legacy = dir.appendingPathComponent("history.json")
+        let invalid = Data("{broken".utf8); try invalid.write(to: legacy)
+        var failed = false
+        do { _ = try HistoryDatabase(url: dir.appendingPathComponent("test.sqlite"), legacyURL: legacy) } catch { failed = true }
+        XCTAssertTrue(failed); XCTAssertEqual(try Data(contentsOf: legacy), invalid)
+    }
+    func testSQLiteTechnicalCache() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let db = try HistoryDatabase(url: dir.appendingPathComponent("test.sqlite"))
+        var record = TechnicalRecord(deviceID: "phone", sections: ["Hardware": ["CPU": "arm64"]])
+        try db.saveTechnical(record)
+        record.sections["Hardware"]?["CPU"] = "arm64e"; try db.saveTechnical(record)
+        XCTAssertEqual(try db.loadTechnical("phone")?.sections["Hardware"]?["CPU"], "arm64e")
+        XCTAssertNil(try db.loadTechnical("other"))
+    }
+    func testTechnicalFieldsExcludeSubscriberData() {
+        let fields = TechnicalReader.hardwareFields(["CPUArchitecture": "arm64", "PhoneNumber": "private", "InternationalMobileSubscriberIdentity": "private", "BasebandMasterKeyHash": "private", "SerialNumber": "hardware-id"])
+        XCTAssertEqual(fields["CPUArchitecture"], "arm64"); XCTAssertEqual(fields["SerialNumber"], "hardware-id")
+        XCTAssertNil(fields["PhoneNumber"]); XCTAssertNil(fields["InternationalMobileSubscriberIdentity"]); XCTAssertNil(fields["BasebandMasterKeyHash"])
+    }
+}
+
+func XCTAssertEqual<T: Equatable>(_ lhs: T, _ rhs: T, file: StaticString = #file, line: UInt = #line) { precondition(lhs == rhs, "Expected \(rhs), got \(lhs)", file: file, line: line) }
+func XCTAssertTrue(_ value: Bool, file: StaticString = #file, line: UInt = #line) { precondition(value, "Expected true", file: file, line: line) }
+func XCTAssertFalse(_ value: Bool, file: StaticString = #file, line: UInt = #line) { precondition(!value, "Expected false", file: file, line: line) }
+func XCTAssertNil<T>(_ value: T?, file: StaticString = #file, line: UInt = #line) { precondition(value == nil, "Expected nil", file: file, line: line) }

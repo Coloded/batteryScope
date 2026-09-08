@@ -1,0 +1,25 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>BatteryScope</title>
+        <item>
+            <title>0.4.0</title>
+            <pubDate>Tue, 08 Sep 2026 17:45:28 +0300</pubDate>
+            <link>https://github.com/Coloded/batteryScope</link>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.4.0
+
+- Официальный механизм обновлений Sparkle 2, как в Video Editor.
+- Проверка обновлений в меню приложения, верхней панели и настройках.
+- Универсальное приложение для Apple Silicon и Intel, macOS 13 или новее.
+- Батареи Mac, iPhone/iPad и доступные Apple-аксессуары; история в SQLite.
+- Технические характеристики устройств с поиском и экспортом.
+
+Версии 0.3.x и ниже устанавливаются поверх вручную один раз: в них ещё нет Sparkle. После установки 0.4.0 следующие версии можно получать из приложения. Для диагностики iPhone/iPad на другом Mac требуется `brew install libimobiledevice`; версия Homebrew должна соответствовать архитектуре Mac.
+]]></description>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.4.0/BatteryScope-stable.dmg" length="3809566" type="application/octet-stream" sparkle:edSignature="RgW7L1LF4z6qs3tST5VrgFVoYpcnZpZxA65WD53RWtJC5tTdEn12vamhp649sJgFklh/TMfYeyHMfaucd4G1Dg=="/>
+        </item>
+    </channel>
+</rss>
