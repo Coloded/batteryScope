@@ -27,7 +27,7 @@ struct Battery: Codable, Identifiable {
     var watts: Double? { guard let voltage, let amperage else { return nil }; return voltage * amperage / 1000 }
     var symbol: String {
         let text = (model + name).lowercased()
-        if id == "mac" { return "desktopcomputer" }
+        if id == "mac" || id.hasPrefix("mac:") { return "desktopcomputer" }
         if text.contains("ipad") { return "ipad" }
         if text.contains("trackpad") { return "trackpad" }
         if text.contains("keyboard") { return "keyboard" }
@@ -45,8 +45,14 @@ enum ReaderError: LocalizedError {
 }
 
 enum Command {
+    static func bundledPath(_ name: String, bundleURL: URL = Bundle.main.bundleURL) -> String? {
+        guard ["idevice_id", "ideviceinfo", "idevicediagnostics"].contains(name) else { return nil }
+        let file = bundleURL.appendingPathComponent("Contents/Helpers/MobileDevice").appendingPathComponent(name)
+        return FileManager.default.isExecutableFile(atPath: file.path) ? file.path : nil
+    }
     static func path(_ name: String) -> String? {
-        ["/opt/homebrew/bin/", "/usr/local/bin/", "/usr/bin/", "/usr/sbin/"].map { $0 + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
+        if let bundled = bundledPath(name) { return bundled }
+        return ["/opt/homebrew/bin/", "/usr/local/bin/", "/usr/bin/", "/usr/sbin/"].map { $0 + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
     static func run(_ name: String, _ args: [String], timeout: TimeInterval = 12) throws -> Data {
         guard let path = path(name) else { throw ReaderError.message("Не найдена системная утилита \(name).") }

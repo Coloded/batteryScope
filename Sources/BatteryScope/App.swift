@@ -30,7 +30,7 @@ struct MainView: View {
                 Label("BatteryScope", systemImage: "battery.100percent").font(.title2.bold()).foregroundStyle(.mint)
                 ScrollView { VStack(alignment: .leading, spacing: 8) {
                     Text("УСТРОЙСТВА").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    ForEach(store.devices) { b in
+                    ForEach(store.knownDevices) { b in
                         Button { store.selected = b.id } label: {
                             HStack { Image(systemName: b.symbol); VStack(alignment: .leading) { Text(b.name).lineLimit(1); Text(b.connection).font(.caption).foregroundStyle(.secondary) }; Spacer(); if b.percent != nil { Text(b.value(b.percent, suffix: "%")).font(.caption.monospacedDigit()) } }
                             .padding(10).background(store.selected == b.id ? Color.mint.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 10))
@@ -107,6 +107,21 @@ struct MainView: View {
                 HStack { Text("Состояние / заряд · \(store.samples.count) снимков").font(.headline); Spacer(); Button("Экспорт CSV") { store.exportCSV() } }
                 ForEach(store.samples.reversed().prefix(100)) { s in HStack { Text(s.battery.date.formatted()); Spacer(); Text(s.battery.value(s.battery.health ?? s.battery.percent, suffix: "%", digits: 1)); Text(s.battery.value(s.battery.cycles, suffix: " циклов")).foregroundStyle(.secondary) }.font(.callout).padding(.vertical, 6); Divider() }
             }
+            DisclosureGroup("Общая история всех устройств · \(store.history.count) снимков") {
+                Button("Экспорт общей истории в CSV") { store.exportCSV(all: true) }
+                ForEach(store.history.reversed().prefix(100)) { sample in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(sample.battery.name)
+                            Text(sample.sourceMacName ?? "Этот Mac").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(sample.battery.date.formatted()).font(.caption)
+                        Text(sample.battery.value(sample.battery.percent, suffix: "%"))
+                    }.padding(.vertical, 4)
+                }
+                Text("Показаны последние 100 снимков. Экспорт содержит всю историю.").font(.caption).foregroundStyle(.secondary)
+            }
             let offline = Dictionary(grouping: store.history, by: { $0.battery.id }).values.compactMap { $0.last?.battery }.filter { b in !store.devices.contains { $0.id == b.id } }
             if !offline.isEmpty { Text("Отключённые устройства").font(.headline); ForEach(offline) { b in Button(b.name) { store.selected = b.id } } }
         }
@@ -126,7 +141,7 @@ struct MainView: View {
             Text("Поля, полученные от устройства. Их набор зависит от оборудования и версии ОС.").foregroundStyle(.secondary)
             if let b = store.current {
                 ForEach(b.metrics, id: \.0) { key, value in HStack { Text(key); Spacer(); Text(value).monospacedDigit() }; Divider() }
-                DisclosureGroup("Исходные диагностические поля") { ForEach(b.details.keys.sorted(), id: \.self) { key in HStack(alignment: .top) { Text(key).frame(maxWidth: .infinity, alignment: .leading); Text(b.details[key] ?? "").frame(maxWidth: .infinity, alignment: .trailing) }.font(.system(.caption, design: .monospaced)).textSelection(.enabled).padding(.vertical, 3) } }
+                DisclosureGroup("Исходные диагностические поля") { ForEach(b.details.keys.sorted(), id: \.self) { key in HStack(alignment: .top) { TechnicalFieldRow(fieldKey: key, raw: b.details[key] ?? "") }.font(.system(.caption, design: .monospaced)).textSelection(.enabled).padding(.vertical, 3) } }
                 if b.id == "mac" {
                     Button(store.storageBusy ? "Читаем…" : "Прочитать данные накопителей") { Task { await store.readStorage() } }.disabled(store.storageBusy)
                     Text("Системные сведения о SSD. Счётчики прочитанных/записанных байтов доступны не на всех Mac.").font(.caption).foregroundStyle(.secondary)
@@ -138,24 +153,22 @@ struct MainView: View {
     private var specifications: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                TextField("Поиск по характеристикам и значениям", text: $technicalSearch).textFieldStyle(.roundedBorder)
+                TextField("Поиск по-русски, по коду или значению", text: $technicalSearch).textFieldStyle(.roundedBorder)
                 Button(store.technicalBusy.contains(store.selected) ? "Читаем…" : "Прочитать заново") { Task { await store.readTechnical(force: true) } }.disabled(store.technicalBusy.contains(store.selected) || store.current?.isLive != true)
                 Button("Экспорт JSON") { store.exportTechnical() }.disabled(store.technical[store.selected] == nil)
             }
             if let record = store.technical[store.selected] {
                 Text("Снимок характеристик: \(record.date.formatted()). Нажмите «Прочитать заново» для актуальных данных.").font(.caption).foregroundStyle(.secondary)
+                Text("Русское название — сверху, исходный код — под ним. Наведите курсор на название, чтобы прочитать пояснение. Служебные коды без подтверждённой расшифровки не интерпретируются.").font(.caption).foregroundStyle(.secondary)
                 ForEach(record.notes, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
                 ForEach(record.sections.keys.sorted(), id: \.self) { section in
                     let values = record.sections[section] ?? [:]
-                    let keys = values.keys.sorted().filter { technicalSearch.isEmpty || section.localizedCaseInsensitiveContains(technicalSearch) || $0.localizedCaseInsensitiveContains(technicalSearch) || (values[$0] ?? "").localizedCaseInsensitiveContains(technicalSearch) }
+                    let keys = values.keys.sorted().filter { technicalSearch.isEmpty || section.localizedCaseInsensitiveContains(technicalSearch) || FieldLabels.matches(technicalSearch, key: $0, raw: values[$0] ?? "") }
                     if !keys.isEmpty {
                         GroupBox(section) {
                             LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(keys, id: \.self) { key in
-                                    HStack(alignment: .top) {
-                                        Text(key).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
-                                        Text(values[key] ?? "").frame(maxWidth: .infinity, alignment: .trailing)
-                                    }.font(.system(.callout, design: .monospaced)).textSelection(.enabled).padding(.vertical, 8)
+                                    TechnicalFieldRow(fieldKey: key, raw: values[key] ?? "").padding(.vertical, 8)
                                     Divider()
                                 }
                             }.padding(10)
@@ -174,11 +187,25 @@ struct MainView: View {
                     Text("Sparkle проверяет обновления на GitHub. Установка — после вашего подтверждения. История SQLite сохраняется отдельно от приложения.").font(.caption).foregroundStyle(.secondary)
                 }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             }
+            GroupBox("Общая история · iCloud Drive") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Обмениваться историей с другими Mac", isOn: Binding(get: { store.historySyncEnabled }, set: { store.setHistorySyncEnabled($0) }))
+                    Text("На каждом Mac запустите BatteryScope, включите iCloud Drive с одной учётной записью Apple и выберите одну и ту же папку. История объединяется в локальной SQLite; сам файл базы не передаётся.").font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button("Выбрать папку…") { store.chooseHistorySyncFolder() }
+                        Button("Обменяться сейчас") { Task { await store.syncHistory() } }.disabled(!store.historySyncEnabled || store.syncBusy)
+                        if store.syncBusy { ProgressView().controlSize(.small) }
+                    }
+                    Text(store.syncFolderName).font(.caption).textSelection(.enabled)
+                    Text(store.syncStatus).font(.caption).foregroundStyle(.secondary)
+                    Text("Передаются имена, идентификаторы устройств и снимки батарей. Подробная техническая диагностика остаётся локально. Выключение обмена не удаляет ранее переданные файлы. Для надёжной загрузки выберите «Сохранять загруженным» для этой папки в Finder, если команда доступна.").font(.caption).foregroundStyle(.secondary)
+                }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            }
             Toggle("Искать iPhone/iPad по Wi-Fi", isOn: store.$wifi)
             Toggle("Показывать Bluetooth-аксессуары Apple", isOn: store.$bluetooth)
             Text("iPhone, iPad и iPod touch: подключите по USB, разблокируйте и подтвердите доверие. Для Wi-Fi включите показ устройства по Wi-Fi в Finder. Изменения поиска применяются при обновлении.").font(.caption).foregroundStyle(.secondary)
             DisclosureGroup("Какие Apple-устройства поддерживаются") {
-                Text("Mac: встроенная батарея. iPhone/iPad/iPod touch: USB и Wi-Fi, диагностика зависит от ОС. Magic Keyboard/Mouse/Trackpad: заряд. AirPods: доступные уровни наушников и футляра из macOS. Apple TV может определяться через доверенное сетевое соединение, но батареи у него нет. Apple Watch, Apple Pencil, AirTag, HomePod и удалённые Mac не предоставляют этому приложению универсальный доступ к батарее; их поддержка не заявляется.").font(.caption).foregroundStyle(.secondary)
+                Text("Mac: встроенная батарея. iPhone/iPad/iPod touch: USB и Wi-Fi, диагностика зависит от ОС. Magic Keyboard/Mouse/Trackpad: заряд. AirPods: доступные уровни наушников и футляра из macOS. Apple TV может определяться через доверенное сетевое соединение, но батареи у него нет. Apple Watch, Apple Pencil, AirTag, HomePod не предоставляют этому приложению универсальный доступ к батарее; их поддержка не заявляется. История других Mac доступна через общую папку, если BatteryScope работает на каждом из них.").font(.caption).foregroundStyle(.secondary)
             }
             Toggle("Уведомлять о низком заряде", isOn: Binding(get: { store.alerts }, set: { store.enableAlerts($0) }))
             HStack { Text("Порог заряда"); Slider(value: store.$threshold, in: 5...50, step: 5); Text("\(Int(store.threshold))%").frame(width: 45) }
@@ -188,7 +215,7 @@ struct MainView: View {
             Text("Подстановки: {{device}}, {{model}}, {{date}}, {{rows}}, {{note}}. Этот шаблон также используется при печати.").font(.caption).foregroundStyle(.secondary)
             TextEditor(text: store.$reportTemplate).font(.system(.caption, design: .monospaced)).frame(height: 230).border(.quaternary)
             Button("Восстановить шаблон") { store.reportTemplate = Export.template }
-            Text("База SQLite: ~/Library/Application Support/BatteryScope/BatteryScope.sqlite\nНет облачной синхронизации или телеметрии. Для записи новых снимков приложение должно оставаться запущенным.").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            Text("База SQLite: ~/Library/Application Support/BatteryScope/BatteryScope.sqlite\nОбмен историей через выбранную папку включается отдельно. Телеметрии нет. Для записи новых снимков приложение должно оставаться запущенным.").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
         }
     }
     private func empty(_ title: String, _ subtitle: String) -> some View { VStack(spacing: 14) { Image(systemName: "chart.xyaxis.line").font(.system(size: 40)).foregroundStyle(.mint); Text(title).font(.title2); Text(subtitle).foregroundStyle(.secondary) }.frame(maxWidth: .infinity).padding(50) }
@@ -208,5 +235,25 @@ struct MenuView: View {
             Button("Проверить обновления…") { updates.check() }.disabled(!updates.canCheck)
             Button("Завершить") { NSApp.terminate(nil) }
         }.padding(20).frame(width: 310)
+    }
+}
+
+struct TechnicalFieldRow: View {
+    let fieldKey: String
+    let raw: String
+    var body: some View {
+        let info = FieldLabels.label(fieldKey)
+        let formatted = FieldLabels.value(raw, for: fieldKey)
+        HStack(alignment: .top, spacing: 20) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(info.title).font(.callout).foregroundStyle(.primary)
+                Text(fieldKey).font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary)
+                if !info.known { Text("Служебное поле · расшифровка не подтверждена").font(.caption2).foregroundStyle(.secondary) }
+            }.frame(maxWidth: .infinity, alignment: .leading).help(info.explanation)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(formatted).font(.callout).monospacedDigit()
+                if formatted != raw { Text("Исходное: " + raw).font(.caption2).foregroundStyle(.secondary) }
+            }.frame(maxWidth: .infinity, alignment: .trailing)
+        }.textSelection(.enabled)
     }
 }

@@ -3,23 +3,30 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.4.0</title>
-            <pubDate>Tue, 08 Sep 2026 17:45:28 +0300</pubDate>
+            <title>0.5.1</title>
+            <pubDate>Tue, 08 Sep 2026 18:23:53 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.4.0
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.5.1
 
-- Официальный механизм обновлений Sparkle 2, как в Video Editor.
-- Проверка обновлений в меню приложения, верхней панели и настройках.
-- Универсальное приложение для Apple Silicon и Intel, macOS 13 или новее.
-- Батареи Mac, iPhone/iPad и доступные Apple-аксессуары; история в SQLite.
-- Технические характеристики устройств с поиском и экспортом.
+- Встроены libimobiledevice и зависимости для Intel и Apple Silicon. Для iPhone/iPad больше не нужно устанавливать Homebrew или вводить команды в Терминал.
+- Разблокируйте подключённый iPhone/iPad и подтвердите доверие к Mac.
 
-Версии 0.3.x и ниже устанавливаются поверх вручную один раз: в них ещё нет Sparkle. После установки 0.4.0 следующие версии можно получать из приложения. Для диагностики iPhone/iPad на другом Mac требуется `brew install libimobiledevice`; версия Homebrew должна соответствовать архитектуре Mac.
+- Общая история между Mac через выбранную папку iCloud Drive: отдельные идентификаторы Mac, объединение без повторных UUID, локальная SQLite, архивные устройства в боковой панели и общий CSV. По умолчанию выключено. На обоих Mac выберите одну и ту же папку iCloud Drive в настройках. Обмен между тестовыми базами проверен; реальная доставка iCloud на двух Mac ещё требует проверки.
+
+- Русские названия и пояснения технических характеристик в разделах «Характеристики» и «Подробности».
+- Поиск по русскому названию, оригинальному коду, пояснению и значению.
+- Объём накопителя показан в ГБ/МБ, известные логические признаки — «Да»/«Нет»; исходные значения сохранены рядом.
+- В JSON-экспорт добавлены переводы без изменения исходных полей.
+- Недокументированные служебные параметры Apple явно отмечены; неоднозначные единицы и коды не интерпретируются.
+
+Универсальная сборка для Apple Silicon и Intel, macOS 13+.
+
+Обновление сохраняет существующую локальную историю. Установщик не содержит личных данных.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.4.0/BatteryScope-stable.dmg" length="3809566" type="application/octet-stream" sparkle:edSignature="RgW7L1LF4z6qs3tST5VrgFVoYpcnZpZxA65WD53RWtJC5tTdEn12vamhp649sJgFklh/TMfYeyHMfaucd4G1Dg=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.5.1/BatteryScope-stable.dmg" length="10194266" type="application/octet-stream" sparkle:edSignature="eIC0hEsuynLNrtHzj25h/X0qP3cj4vz1nUhQ+AiMkOPow9rsnM7VtfPFrnbArEQT5k4hDG72GdmRYChbPFeVAQ=="/>
         </item>
     </channel>
 </rss>

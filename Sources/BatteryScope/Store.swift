@@ -20,16 +20,32 @@ import AppKit
     @AppStorage("threshold") var threshold = 20.0
     @AppStorage("timeThreshold") var timeThreshold = 15.0
     @AppStorage("reportTemplate") var reportTemplate = Export.template
+    @AppStorage("historySyncEnabled") var historySyncEnabled = false
+    @Published var syncBusy = false
+    @Published var syncStatus = "Обмен историей ещё не выполнялся."
+    @AppStorage("historySyncFolderName") var syncFolderName = "Папка не выбрана"
+    private var syncWorker: Task<HistorySyncResult, Error>?
+    private var syncGeneration = UUID()
+    private var lastSyncAttempt = Date.distantPast
     private var notified = Set<String>()
     private var timer: Timer?
     private var lastSaved: [String: Date] = [:]
     private var database: HistoryDatabase?
     let databaseURL: URL
     var current: Battery? {
-        if let device = devices.first(where: { $0.id == selected }) { return device }
-        guard var archived = history.last(where: { $0.battery.id == selected })?.battery else { return nil }
-        archived.available = false; archived.connection = "Архив"; archived.note = "Устройство отключено. Показан сохранённый снимок от \(archived.date.formatted())."
-        return archived
+        knownDevices.first(where: { $0.id == selected })
+    }
+    var knownDevices: [Battery] {
+        var result = devices
+        var seen = Set(devices.map(\.id))
+        for sample in history.reversed() where seen.insert(sample.battery.id).inserted {
+            var archived = sample.battery
+            archived.available = false
+            archived.connection = "История · " + (sample.sourceMacName ?? "этот Mac")
+            archived.note = "Последнее измерение: \(archived.date.formatted()). Новые данные появятся после запуска BatteryScope на исходном Mac и доставки файлов iCloud."
+            result.append(archived)
+        }
+        return result
     }
     var samples: [Sample] { history.filter { $0.battery.id == selected } }
     var menuTitle: String {
@@ -52,7 +68,7 @@ import AppKit
         let result = await DeviceReader.scan(network: wifi, bluetooth: bluetooth)
         devices = result.devices; messages = result.messages; busy = false
         if current == nil { selected = "mac" }
-        for b in devices where b.isLive && (b.percent != nil || b.components?.isEmpty == false) {
+        for b in devices where b.isLive && (b.id == "mac" || b.percent != nil || b.components?.isEmpty == false) {
             if Date().timeIntervalSince(lastSaved[b.id] ?? .distantPast) >= 3600 { save(b) }
             let low = b.percent.map { $0 <= threshold } == true || (b.id == "mac" && b.minutes.map { $0 <= timeThreshold } == true)
             if !low || b.external == true { notified.remove(b.id) }
@@ -62,18 +78,82 @@ import AppKit
                 catch { self.error = error.localizedDescription }
             }
         }
+        if historySyncEnabled && Date().timeIntervalSince(lastSyncAttempt) >= 300 {
+            await syncHistory()
+        }
     }
     func save(_ battery: Battery) {
         guard battery.isLive else { return }
         guard let database else { error = "База SQLite недоступна. Перезапустите приложение после исправления ошибки доступа."; return }
         var snapshot = battery
         snapshot.details = [:]
-        let sample = Sample(battery: snapshot)
+        let sample = Sample(battery: snapshot, sourceMacID: LocalMacIdentity.id, sourceMacName: LocalMacIdentity.name)
         do {
             try database.append(sample)
             history.append(sample)
             lastSaved[battery.id] = Date()
         } catch { self.error = "Ошибка сохранения истории: \(error.localizedDescription)" }
+    }
+    func setHistorySyncEnabled(_ enabled: Bool) {
+        syncGeneration = UUID()
+        syncWorker?.cancel()
+        historySyncEnabled = enabled
+        if !enabled { syncStatus = "Обмен выключен. Локальная история и файлы в общей папке сохранены."; return }
+        if UserDefaults.standard.data(forKey: "historySyncFolderBookmark") == nil { chooseHistorySyncFolder() }
+        else { Task { await syncHistory() } }
+    }
+    func chooseHistorySyncFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false; panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false; panel.canCreateDirectories = true
+        panel.prompt = "Выбрать для истории"
+        panel.message = "Выберите одну и ту же папку в iCloud Drive на всех Mac. В неё будут записаны история измерений, имена и идентификаторы устройств. Подробная диагностика останется на этом Mac."
+        guard panel.runModal() == .OK, let folder = panel.url else {
+            if UserDefaults.standard.data(forKey: "historySyncFolderBookmark") == nil { historySyncEnabled = false }
+            return
+        }
+        do {
+            let bookmark = try folder.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            syncGeneration = UUID(); syncWorker?.cancel()
+            UserDefaults.standard.set(bookmark, forKey: "historySyncFolderBookmark")
+            syncFolderName = folder.path; historySyncEnabled = true
+            Task { await syncHistory() }
+        } catch { self.error = "Не удалось запомнить папку: \(error.localizedDescription)" }
+    }
+    func syncHistory() async {
+        guard historySyncEnabled, !syncBusy, let database else { return }
+        syncBusy = true; lastSyncAttempt = Date()
+        let generation = syncGeneration
+        defer {
+            syncBusy = false; syncWorker = nil
+            // A changed folder must wait for the previous coordinated operation to finish.
+            if generation != syncGeneration && historySyncEnabled { Task { await syncHistory() } }
+        }
+        do {
+            guard let bookmark = UserDefaults.standard.data(forKey: "historySyncFolderBookmark") else {
+                throw ReaderError.message("Выберите общую папку истории в настройках.")
+            }
+            var stale = false
+            let folder = try URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope, .withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale)
+            if stale { throw ReaderError.message("Доступ к папке изменился. Выберите её заново в настройках.") }
+            syncStatus = "Читаем и записываем файлы общей истории…"
+            let snapshots = history, macID = LocalMacIdentity.id, macName = LocalMacIdentity.name
+            let worker = Task.detached(priority: .utility) {
+                try HistoryFolderSync.exchange(folder: folder, samples: snapshots, macID: macID, macName: macName)
+            }
+            syncWorker = worker
+            let result = try await worker.value
+            guard historySyncEnabled, generation == syncGeneration else { return }
+            try database.merge(result.incoming)
+            history = try database.load()
+            for sample in history { lastSaved[sample.battery.id] = max(lastSaved[sample.battery.id] ?? .distantPast, sample.battery.date) }
+            syncStatus = "\(Date().formatted()): записано файлов \(result.written), получено снимков \(result.incoming.count). Доставкой на другие Mac управляет iCloud."
+            if result.waiting > 0 { syncStatus += " Ожидают загрузки: \(result.waiting)." }
+            if !result.issues.isEmpty { syncStatus += " Проблемы с файлами (\(result.issues.count)): " + result.issues.prefix(3).joined(separator: "; ") }
+        } catch {
+            guard historySyncEnabled, generation == syncGeneration else { return }
+            syncStatus = "Обмен не завершён: \(error.localizedDescription). Повторим автоматически; локальная история сохранена."
+        }
     }
     func readTechnical(force: Bool = false) async {
         guard let device = current, !technicalBusy.contains(device.id) else { return }
@@ -90,8 +170,7 @@ import AppKit
     func exportTechnical() {
         guard let record = technical[selected] else { return }
         do {
-            let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
-            write(String(decoding: try encoder.encode(record), as: UTF8.self), name: "BatteryScope-specifications.json")
+            write(String(decoding: try FieldLabels.export(record), as: UTF8.self), name: "BatteryScope-specifications.json")
         } catch { self.error = error.localizedDescription }
     }
     func enableAlerts(_ enabled: Bool) {
@@ -101,7 +180,7 @@ import AppKit
             catch { alerts = false; self.error = error.localizedDescription }
         } }
     }
-    func exportCSV() { write(Export.csv(samples), name: "BatteryScope-history.csv") }
+    func exportCSV(all: Bool = false) { write(Export.csv(all ? history : samples), name: "BatteryScope-history.csv") }
     func exportReport() { if let b = current { write(Export.report(b, template: reportTemplate), name: "BatteryScope-report.html") } }
     func write(_ text: String, name: String) {
         let panel = NSSavePanel(); panel.nameFieldStringValue = name

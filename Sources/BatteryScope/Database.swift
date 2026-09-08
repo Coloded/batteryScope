@@ -55,7 +55,7 @@ final class HistoryDatabase {
     private func importedLegacy() throws -> Bool { try statement("SELECT value FROM metadata WHERE key='legacy_json_imported'") { stmt in let code = sqlite3_step(stmt); try check(code); return code == SQLITE_ROW } }
     private func insert(_ sample: Sample) throws {
         let b = sample.battery
-        try statement("INSERT INTO devices VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, model=excluded.model, last_seen=MAX(last_seen,excluded.last_seen)") { stmt in
+        try statement("INSERT INTO devices VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=CASE WHEN excluded.last_seen >= devices.last_seen THEN excluded.name ELSE devices.name END, model=CASE WHEN excluded.last_seen >= devices.last_seen THEN excluded.model ELSE devices.model END, last_seen=MAX(devices.last_seen,excluded.last_seen)") { stmt in
             try bind(b.id, to: stmt, at: 1); try bind(b.name, to: stmt, at: 2); try bind(b.model, to: stmt, at: 3); try bind(b.date.timeIntervalSince1970, to: stmt, at: 4); try check(sqlite3_step(stmt))
         }
         try statement("INSERT INTO samples VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING") { stmt in
@@ -65,6 +65,17 @@ final class HistoryDatabase {
         }
     }
     func append(_ sample: Sample) throws { try transaction { try insert(sample) } }
+    func merge(_ samples: [Sample]) throws {
+        try transaction {
+            for sample in samples {
+                let exists = try statement("SELECT 1 FROM samples WHERE id=?") { stmt in
+                    try bind(sample.id.uuidString, to: stmt, at: 1)
+                    let code = sqlite3_step(stmt); try check(code); return code == SQLITE_ROW
+                }
+                if !exists { try insert(sample) }
+            }
+        }
+    }
     func load() throws -> [Sample] {
         try statement("SELECT payload FROM samples ORDER BY captured_at, id") { stmt in
             var result: [Sample] = []

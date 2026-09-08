@@ -23,3 +23,5 @@ private-data/
 BatteryScope-history*.csv
 BatteryScope-report*.html
 BatteryScope-specifications*.json
+
+!dist/BatteryScope-mobile-sources.tar

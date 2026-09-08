@@ -21,8 +21,11 @@ if [ ! -f Assets/AppIcon.icns ] || [ Assets/AppIcon.png -nt Assets/AppIcon.icns 
 cp Assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 COPYFILE_DISABLE=1 ditto --norsrc --noextattr "$sparkle_root/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 cp "$sparkle_root/LICENSE" "$app/Contents/Resources/Sparkle-LICENSE.txt"
+python3 scripts/build-mobile.py "$app"
 python3 scripts/build-manifest.py "$app/Contents/Resources/BuildManifest.json"
+python3 scripts/check-private-data.py --app "$app"
 codesign --force --sign - "$app"
 codesign --verify --deep --strict "$app"
+python3 scripts/validate-mobile.py "$app"
 lipo "$app/Contents/MacOS/BatteryScope" -verify_arch arm64 x86_64
 echo "Собрано: $app"

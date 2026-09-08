@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ "${1:-}" != --skip-build ]; then bash scripts/build.sh; fi
 app="${TMPDIR:-/tmp}/batteryscope-build/BatteryScope.app"
+python3 scripts/check-private-data.py --app "$app"
 version="$(plutil -extract CFBundleShortVersionString raw Info.plist)"
 stage="$(mktemp -d "${TMPDIR:-/tmp}/batteryscope-release.XXXXXX")"
 trap 'rm -rf "$stage"' EXIT

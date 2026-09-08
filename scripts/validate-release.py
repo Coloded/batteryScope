@@ -62,6 +62,8 @@ guard key.isValidSignature(signature, for: payload) else { fputs("Invalid Ed2551
         subprocess.run(["hdiutil", "attach", "-readonly", "-nobrowse", "-mountpoint", str(mount), str(stable)], check=True, stdout=subprocess.DEVNULL)
         try:
             app = mount / "BatteryScope.app"
+            subprocess.run(["python3", str(ROOT / "scripts/check-private-data.py"), "--app", str(app)], check=True)
+            subprocess.run(["python3", str(ROOT / "scripts/validate-mobile.py"), str(app)], check=True)
             embedded = plistlib.loads((app / "Contents/Info.plist").read_bytes())
             for key in ["CFBundleIdentifier", "CFBundleVersion", "CFBundleShortVersionString", "LSMinimumSystemVersion", "SUFeedURL", "SUPublicEDKey", "SUVerifyUpdateBeforeExtraction"]:
                 require(embedded[key] == info[key], f"Bundle metadata differs: {key}")

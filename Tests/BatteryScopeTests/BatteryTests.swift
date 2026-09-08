@@ -23,7 +23,15 @@ import Foundation
         try suite.testSQLiteBadLegacyPreserved()
         try suite.testSQLiteTechnicalCache()
         suite.testTechnicalFieldsExcludeSubscriberData()
-        print("PASS: 20 tests (Mac, mobile, accessories, SQLite migration/reopen, technical data, exports)")
+        suite.testRussianFieldLabelsAndSearch()
+        suite.testLocalizedValuesPreserveAmbiguousUnits()
+        suite.testUnknownFieldsAreNotGuessed()
+        try suite.testTranslatedExportKeepsRawFields()
+        try suite.testCloudHistorySeparatesMacsAndKeepsOrigin()
+        try suite.testCloudHistoryRejectsFutureSchema()
+        try suite.testCloudHistoryExchangeIsIdempotent()
+        try suite.testBundledMobileHelpersAreDiscovered()
+        print("PASS: 28 tests (battery, SQLite, technical data, Russian labels, units, exports)")
         if CommandLine.arguments.contains("--live-devices") {
             let phones = DeviceReader.mobile(network: true)
             XCTAssertTrue(phones.messages.isEmpty)
@@ -39,6 +47,64 @@ import Foundation
             XCTAssertTrue(peripherals.messages.isEmpty)
             for b in peripherals.devices { print("ACCESSORY: \(b.model), live \(b.isLive), charge \(b.value(b.percent))") }
         }
+    }
+    func testCloudHistorySeparatesMacsAndKeepsOrigin() throws {
+        var battery = parse(["CurrentCapacity": 40, "MaxCapacity": 100])
+        battery.details = ["SerialNumber": "private"]
+        let sample = Sample(battery: battery)
+        let envelope = HistoryEnvelope.outgoing(sample, macID: "mac-a", macName: "Mac A")
+        let remote = try envelope.incoming(on: "mac-b")
+        XCTAssertEqual(remote.battery.id, "mac:mac-a")
+        XCTAssertEqual(remote.id, sample.id)
+        XCTAssertTrue(remote.battery.details.isEmpty)
+        XCTAssertEqual(remote.sourceMacName, "Mac A")
+        let forwarded = HistoryEnvelope.outgoing(remote, macID: "mac-b", macName: "Mac B")
+        XCTAssertEqual(forwarded.sample.sourceMacID, "mac-a")
+        XCTAssertEqual(try forwarded.incoming(on: "mac-a").battery.id, "mac")
+        var phone = battery; phone.id = "phone-udid"
+        XCTAssertEqual(try HistoryEnvelope.outgoing(Sample(battery: phone), macID: "mac-a", macName: "Mac A").incoming(on: "mac-b").battery.id, "phone-udid")
+    }
+    func testCloudHistoryRejectsFutureSchema() throws {
+        var envelope = HistoryEnvelope.outgoing(Sample(battery: parse([:])), macID: "mac-a", macName: "Mac A")
+        envelope.schemaVersion = 999
+        var rejected = false
+        do { _ = try envelope.incoming(on: "mac-b") } catch { rejected = true }
+        XCTAssertTrue(rejected)
+    }
+    func testCloudHistoryExchangeIsIdempotent() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let a = try HistoryDatabase(url: folder.appendingPathComponent("a.sqlite"))
+        let b = try HistoryDatabase(url: folder.appendingPathComponent("b.sqlite"))
+        let localA = Sample(battery: parse(["CurrentCapacity": 50, "MaxCapacity": 100]))
+        let localB = Sample(battery: parse(["CurrentCapacity": 80, "MaxCapacity": 100]))
+        try a.append(localA); try b.append(localB)
+        _ = try HistoryFolderSync.exchange(folder: folder, samples: a.load(), macID: "a", macName: "Mac A")
+        let received = try HistoryFolderSync.exchange(folder: folder, samples: b.load(), macID: "b", macName: "Mac B")
+        try b.merge(received.incoming); try b.merge(received.incoming)
+        XCTAssertEqual(try b.load().count, 2)
+        XCTAssertEqual(Set(try b.load().map { $0.battery.id }), Set(["mac", "mac:a"]))
+        let back = try HistoryFolderSync.exchange(folder: folder, samples: a.load(), macID: "a", macName: "Mac A")
+        try a.merge(back.incoming)
+        XCTAssertEqual(try a.load().count, 2)
+        let again = try HistoryFolderSync.exchange(folder: folder, samples: b.load(), macID: "b", macName: "Mac B")
+        XCTAssertEqual(again.written, 0); XCTAssertTrue(again.incoming.isEmpty)
+        try Data("invalid JSON".utf8).write(to: folder.appendingPathComponent(HistoryFolderSync.subdirectory).appendingPathComponent("broken.json"))
+        let damaged = try HistoryFolderSync.exchange(folder: folder, samples: b.load(), macID: "b", macName: "Mac B")
+        XCTAssertEqual(damaged.issues.count, 1); XCTAssertEqual(try b.load().count, 2)
+    }
+    func testBundledMobileHelpersAreDiscovered() throws {
+        let bundle = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".app")
+        let helpers = bundle.appendingPathComponent("Contents/Helpers/MobileDevice")
+        try FileManager.default.createDirectory(at: helpers, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: bundle) }
+        let utility = helpers.appendingPathComponent("ideviceinfo")
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: utility)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: utility.path)
+        XCTAssertEqual(Command.bundledPath("ideviceinfo", bundleURL: bundle), utility.path)
+        XCTAssertNil(Command.bundledPath("idevice_id", bundleURL: bundle))
+        XCTAssertNil(Command.bundledPath("../../ideviceinfo", bundleURL: bundle))
     }
     func parse(_ values: [String: Any]) -> Battery { BatteryParser.parse(values, id: "mac", name: "Test", model: "MacBook", connection: "Этот Mac") }
     func testModernMacDoesNotTreatPercentAsMilliampHours() {
@@ -168,6 +234,37 @@ import Foundation
         let fields = TechnicalReader.hardwareFields(["CPUArchitecture": "arm64", "PhoneNumber": "private", "InternationalMobileSubscriberIdentity": "private", "BasebandMasterKeyHash": "private", "SerialNumber": "hardware-id"])
         XCTAssertEqual(fields["CPUArchitecture"], "arm64"); XCTAssertEqual(fields["SerialNumber"], "hardware-id")
         XCTAssertNil(fields["PhoneNumber"]); XCTAssertNil(fields["InternationalMobileSubscriberIdentity"]); XCTAssertNil(fields["BasebandMasterKeyHash"])
+    }
+    func testRussianFieldLabelsAndSearch() {
+        XCTAssertEqual(FieldLabels.label("ProductType").title, "Идентификатор модели")
+        let nested = FieldLabels.label("BatteryData.LifetimeData.CycleCount")
+        XCTAssertTrue(nested.title.contains("Число циклов зарядки"))
+        XCTAssertTrue(FieldLabels.matches("циклов", key: "CycleCount", raw: "100"))
+        XCTAssertTrue(FieldLabels.matches("ProductType", key: "ProductType", raw: "iPhone99,1"))
+        XCTAssertTrue(FieldLabels.label("IOReportLegend[0].IOReportChannels[12][2]").title.contains("[12][2]"))
+    }
+    func testLocalizedValuesPreserveAmbiguousUnits() {
+        XCTAssertEqual(FieldLabels.value("true", for: "IsCharging"), "Да")
+        XCTAssertEqual(FieldLabels.value("1", for: "ChipID"), "1")
+        XCTAssertEqual(FieldLabels.value("256000000000", for: "TotalDiskCapacity"), "256,00 ГБ")
+        XCTAssertEqual(FieldLabels.value("3909", for: "Temperature"), "39,09 °C")
+        XCTAssertEqual(FieldLabels.value("3909", for: "BatteryData.LifetimeData.MaximumTemperature"), "3909")
+        XCTAssertEqual(FieldLabels.value("100", for: "MaxCapacity"), "100")
+        XCTAssertEqual(FieldLabels.value("12345", for: "BatteryData.ManufactureDate"), "12345")
+    }
+    func testUnknownFieldsAreNotGuessed() {
+        let label = FieldLabels.label("BatteryData.UndocumentedNewFlag")
+        XCTAssertFalse(label.known)
+        XCTAssertTrue(label.explanation.contains("не подтверждены"))
+        XCTAssertEqual(FieldLabels.value("128", for: "BatteryData.UndocumentedNewFlag"), "128")
+    }
+    func testTranslatedExportKeepsRawFields() throws {
+        let record = TechnicalRecord(deviceID: "test", sections: ["ОС": ["ProductVersion": "26.6.1"]])
+        let object = try JSONSerialization.jsonObject(with: FieldLabels.export(record)) as! [String: Any]
+        let sections = object["sections"] as! [String: [String: String]]
+        let labels = object["translations"] as! [String: [String: [String: String]]]
+        XCTAssertEqual(sections["ОС"]?["ProductVersion"], "26.6.1")
+        XCTAssertEqual(labels["ОС"]?["ProductVersion"]?["name_ru"], "Версия операционной системы")
     }
 }
 

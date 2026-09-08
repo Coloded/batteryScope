@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 
 def inputs():
-    paths=[ROOT/'Info.plist',ROOT/'Package.swift',ROOT/'Assets/AppIcon.icns']
+    paths=[ROOT/'Info.plist',ROOT/'Package.swift',ROOT/'Assets/AppIcon.icns',ROOT/'ThirdParty/mobile-lock.json']
     paths+=sorted((ROOT/'Sources').rglob('*.swift'))
     paths+=sorted(p for p in (ROOT/'scripts').iterdir() if p.suffix in ('.sh','.py') and not p.name.startswith('._'))
     return {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if not p.name.startswith('._')}

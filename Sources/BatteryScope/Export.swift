@@ -3,17 +3,19 @@ import Foundation
 struct Sample: Codable, Identifiable {
     var id = UUID()
     var battery: Battery
+    var sourceMacID: String? = nil
+    var sourceMacName: String? = nil
 }
 
 enum Export {
     static func csv(_ samples: [Sample]) -> String {
         func field(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
         func n(_ v: Double?) -> String { v.map { String($0) } ?? "" }
-        let header = "date,device,model,connection,charge_percent,health_percent,full_mAh,design_mAh,cycles,temperature_C,voltage_V,current_mA,components\n"
+        let header = "date,device,model,connection,charge_percent,health_percent,full_mAh,design_mAh,cycles,temperature_C,voltage_V,current_mA,components,device_id,source_mac_id,source_mac_name\n"
         return header + samples.map { s in
             let b = s.battery
             let components = (b.components ?? [:]).keys.sorted().map { "\($0)=\(n(b.components?[$0]))" }.joined(separator: "; ")
-            return [ISO8601DateFormatter().string(from: b.date), b.name, b.model, b.connection, n(b.percent), n(b.health), n(b.full), n(b.design), n(b.cycles), n(b.temperature), n(b.voltage), n(b.amperage), components].map(field).joined(separator: ",")
+            return [ISO8601DateFormatter().string(from: b.date), b.name, b.model, b.connection, n(b.percent), n(b.health), n(b.full), n(b.design), n(b.cycles), n(b.temperature), n(b.voltage), n(b.amperage), components, b.id, s.sourceMacID ?? "", s.sourceMacName ?? ""].map(field).joined(separator: ",")
         }.joined(separator: "\n")
     }
     static func escape(_ s: String) -> String { s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;") }

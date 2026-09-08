@@ -34,5 +34,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "dist/BatteryScope-${version}-universal.dmg" \
             dist/BatteryScope-stable.dmg \
+            dist/BatteryScope-mobile-sources.tar \
             --verify-tag --title "BatteryScope ${version}" \
             --notes-file updates/release-notes.md --latest

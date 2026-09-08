@@ -73,7 +73,7 @@ enum DeviceReader {
     static func mobile(network: Bool) -> ScanResult {
         var result = ScanResult(devices: [], messages: [])
         guard ["idevice_id", "ideviceinfo", "idevicediagnostics"].allSatisfy({ Command.path($0) != nil }) else {
-            result.messages = ["Для iPhone/iPad требуется libimobiledevice. Установка: brew install libimobiledevice"]
+            result.messages = ["Не найдены встроенные утилиты iPhone/iPad. Переустановите последнюю версию BatteryScope из официального релиза."]
             return result
         }
         var seen = Set<String>()
