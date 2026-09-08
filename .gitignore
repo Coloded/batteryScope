@@ -25,3 +25,7 @@ BatteryScope-report*.html
 BatteryScope-specifications*.json
 
 !dist/BatteryScope-mobile-sources.tar
+
+# Personal source screenshots and illustrated local manual.
+/screenshot/
+/docs/private-guide/
