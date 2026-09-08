@@ -29,3 +29,10 @@ BatteryScope-specifications*.json
 # Personal source screenshots and illustrated local manual.
 /screenshot/
 /docs/private-guide/
+
+# Internal documentation stays on this Mac. Only the user guide and updates are public.
+/AGENTS.md
+/Assets/ICON.md
+/docs/*
+!/docs/UPDATES.md
+!/docs/guide/
