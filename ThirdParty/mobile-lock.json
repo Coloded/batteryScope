@@ -1,10 +1,10 @@
 [
   {
-    "name": "openssl@3",
-    "version": "3.6.4",
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz",
-    "sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
-    "directory": "openssl-3.6.4"
+    "name": "openssl",
+    "version": "4.0.2",
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz",
+    "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+    "directory": "openssl-4.0.2"
   },
   {
     "name": "libplist",

@@ -3,5 +3,21 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 test_dir="${TMPDIR:-/tmp}/batteryscope-tests"
 mkdir -p "$test_dir"
-swiftc -module-cache-path "$test_dir/modules" Sources/BatteryScope/Battery.swift Sources/BatteryScope/Export.swift Sources/BatteryScope/Devices.swift Sources/BatteryScope/Database.swift Sources/BatteryScope/Technical.swift Sources/BatteryScope/FieldLabels.swift Sources/BatteryScope/HistorySync.swift Tests/BatteryScopeTests/BatteryTests.swift -o "$test_dir/BatteryTests"
+test_sources=(
+  Sources/BatteryScope/Domain/Battery.swift
+  Sources/BatteryScope/Domain/PowerReadings.swift
+  Sources/BatteryScope/Infrastructure/SystemCommand.swift
+  Sources/BatteryScope/Devices/BatteryParser.swift
+  Sources/BatteryScope/Devices/MacBatteryReader.swift
+  Sources/BatteryScope/Reports/Export.swift
+  Sources/BatteryScope/Devices/ConnectedDeviceReader.swift
+  Sources/BatteryScope/History/HistoryDatabase.swift
+  Sources/BatteryScope/Devices/TechnicalReader.swift
+  Sources/BatteryScope/Platform/SystemCapabilities.swift
+  Sources/BatteryScope/UI/Shared/FieldLabels.swift
+  Sources/BatteryScope/History/HistoryFolderSync.swift
+  Sources/BatteryScope/History/CloudFolder.swift
+  Tests/BatteryScopeTests/BatteryTests.swift
+)
+swiftc -module-cache-path "$test_dir/modules" "${test_sources[@]}" -o "$test_dir/BatteryTests"
 "$test_dir/BatteryTests" "$@"

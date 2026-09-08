@@ -31,7 +31,11 @@ import Foundation
         try suite.testCloudHistoryRejectsFutureSchema()
         try suite.testCloudHistoryExchangeIsIdempotent()
         try suite.testBundledMobileHelpersAreDiscovered()
-        print("PASS: 28 tests (battery, SQLite, technical data, Russian labels, units, exports)")
+        suite.testChargingPowerDoesNotMixDifferentSources()
+        suite.testPowerPreservesZeroAndRejectsBadCurrent()
+        try suite.testPowerHistoryAndPeerReceipts()
+        suite.testCloudPlaceholderResolution()
+        print("PASS: 32 tests (battery, SQLite, technical data, Russian labels, units, exports)")
         if CommandLine.arguments.contains("--live-devices") {
             let phones = DeviceReader.mobile(network: true)
             XCTAssertTrue(phones.messages.isEmpty)
@@ -105,6 +109,52 @@ import Foundation
         XCTAssertEqual(Command.bundledPath("ideviceinfo", bundleURL: bundle), utility.path)
         XCTAssertNil(Command.bundledPath("idevice_id", bundleURL: bundle))
         XCTAssertNil(Command.bundledPath("../../ideviceinfo", bundleURL: bundle))
+    }
+    func testChargingPowerDoesNotMixDifferentSources() {
+        let b = parse(["Voltage": 12000, "Amperage": 1000, "InstantAmperage": 2000, "ExternalConnected": true,
+                       "AdapterDetails": ["Watts": 96], "Other": ["Watts": 240],
+                       "PowerTelemetryData": ["SystemPowerIn": 40000, "SystemLoad": 16000, "BatteryPower": 24000, "WallEnergyEstimate": 999999]])
+        XCTAssertEqual(b.watts, 24)
+        XCTAssertEqual(b.power?.inputWatts, 40)
+        XCTAssertEqual(b.power?.systemWatts, 16)
+        XCTAssertEqual(b.power?.adapterRatingWatts, 96)
+        XCTAssertEqual(b.currentSource, "InstantAmperage")
+        let disconnected = parse(["ExternalConnected": false, "PowerTelemetryData": ["SystemPowerIn": 40000]])
+        XCTAssertNil(disconnected.power?.inputWatts)
+    }
+    func testPowerPreservesZeroAndRejectsBadCurrent() {
+        let zero = parse(["Voltage": 12000, "InstantAmperage": 0, "Amperage": 500, "ExternalConnected": true, "PowerTelemetryData": ["SystemPowerIn": 0]])
+        XCTAssertEqual(zero.watts, 0); XCTAssertEqual(zero.power?.inputWatts, 0)
+        XCTAssertNil(parse([:]).power?.inputWatts)
+        XCTAssertNil(parse(["Voltage": 12000, "Amperage": 999999]).watts)
+        let fallback = parse(["Voltage": 12000, "InstantAmperage": 999999, "Amperage": -1000])
+        XCTAssertEqual(fallback.watts, -12)
+        let signed = parse(["PowerTelemetryData": ["BatteryPower": NSNumber(value: UInt64.max - 999)]])
+        XCTAssertEqual(signed.power?.reportedBatteryWatts, -1)
+    }
+    func testCloudPlaceholderResolution() {
+        let id = UUID().uuidString
+        let parent = URL(fileURLWithPath: "/tmp")
+        XCTAssertEqual(HistoryFolderSync.logicalURL(parent.appendingPathComponent("." + id + ".json.icloud"))?.lastPathComponent, id + ".json")
+        XCTAssertNil(HistoryFolderSync.logicalURL(parent.appendingPathComponent(".unrelated.icloud")))
+    }
+    func testPowerHistoryAndPeerReceipts() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var battery = parse(["Voltage": 12000, "Amperage": -1000, "ExternalConnected": true, "PowerTelemetryData": ["SystemPowerIn": 5000]])
+        let db = try HistoryDatabase(url: root.appendingPathComponent("history.sqlite"))
+        let sample = Sample(battery: battery, sourceMacID: "a", sourceMacName: "Synthetic A")
+        try db.append(sample)
+        XCTAssertEqual(try db.load().first?.battery.power?.inputWatts, 5)
+        let imported = try HistoryEnvelope.outgoing(sample, macID: "a", macName: "Synthetic A").incoming(on: "b")
+        _ = try HistoryFolderSync.exchangePeers(root: root, macID: "b", macName: "Synthetic B", samples: [imported])
+        let peers = try HistoryFolderSync.exchangePeers(root: root, macID: "a", macName: "Synthetic A", samples: [sample])
+        XCTAssertEqual(peers.first?.receivedBySource["a"], 1)
+        battery.power = nil
+        let data = try JSONEncoder().encode(Sample(battery: battery))
+        let old = try JSONDecoder().decode(Sample.self, from: data)
+        XCTAssertNil(old.battery.power)
     }
     func parse(_ values: [String: Any]) -> Battery { BatteryParser.parse(values, id: "mac", name: "Test", model: "MacBook", connection: "Этот Mac") }
     func testModernMacDoesNotTreatPercentAsMilliampHours() {

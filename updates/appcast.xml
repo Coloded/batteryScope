@@ -3,30 +3,26 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.5.1</title>
-            <pubDate>Tue, 08 Sep 2026 18:23:53 +0300</pubDate>
+            <title>0.6.0</title>
+            <pubDate>Tue, 08 Sep 2026 19:00:15 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>7</sparkle:version>
-            <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.5.1
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.6.0
 
-- Встроены libimobiledevice и зависимости для Intel и Apple Silicon. Для iPhone/iPad больше не нужно устанавливать Homebrew или вводить команды в Терминал.
-- Разблокируйте подключённый iPhone/iPad и подтвердите доверие к Mac.
+- Меню выбора устройств вместо длинного списка; 14 собственных векторных иконок, включая трекпад и MacBook.
+- Общая история: кнопка настройки стандартной папки iCloud Drive/BatteryScope, статусы загрузки и подтверждения от других Mac. Локальная SQLite сохраняется.
+- Раздельные показатели входной мощности, потребления системы, потока батареи и номинала адаптера. График текущих показаний; неизвестные данные не заменяются нулём или оценкой по загрузке CPU.
+- События питания и экономный опрос, сведения CPU/GPU и состояния системы, добровольный автозапуск и локальная диагностика приложения.
+- Встроенные мобильные утилиты обновлены на OpenSSL 4.0.2; Homebrew не требуется.
+- Исходники разделены по назначению: устройства, история, платформа, отчёты и экраны интерфейса.
 
-- Общая история между Mac через выбранную папку iCloud Drive: отдельные идентификаторы Mac, объединение без повторных UUID, локальная SQLite, архивные устройства в боковой панели и общий CSV. По умолчанию выключено. На обоих Mac выберите одну и ту же папку iCloud Drive в настройках. Обмен между тестовыми базами проверен; реальная доставка iCloud на двух Mac ещё требует проверки.
+На каждом Mac нажмите «Настроить общую папку iCloud» в настройках. Используйте одну учётную запись Apple с включённым iCloud Drive. Получение другим Mac подтверждается отдельно в списке участников обмена.
 
-- Русские названия и пояснения технических характеристик в разделах «Характеристики» и «Подробности».
-- Поиск по русскому названию, оригинальному коду, пояснению и значению.
-- Объём накопителя показан в ГБ/МБ, известные логические признаки — «Да»/«Нет»; исходные значения сохранены рядом.
-- В JSON-экспорт добавлены переводы без изменения исходных полей.
-- Недокументированные служебные параметры Apple явно отмечены; неоднозначные единицы и коды не интерпретируются.
-
-Универсальная сборка для Apple Silicon и Intel, macOS 13+.
-
-Обновление сохраняет существующую локальную историю. Установщик не содержит личных данных.
+Универсальная сборка для Apple Silicon и Intel, macOS 13+. История пользователя не входит в установщик.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.5.1/BatteryScope-stable.dmg" length="10194266" type="application/octet-stream" sparkle:edSignature="eIC0hEsuynLNrtHzj25h/X0qP3cj4vz1nUhQ+AiMkOPow9rsnM7VtfPFrnbArEQT5k4hDG72GdmRYChbPFeVAQ=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.6.0/BatteryScope-stable.dmg" length="10332751" type="application/octet-stream" sparkle:edSignature="/TGn9YyGWnUoqZCDIVYRSxmoo8mG2IBA7zLvNtZjtVKxOqm9X1CdbTpg4tp9SGejEiNr9UI9JjqLk0GoX9lvDA=="/>
         </item>
     </channel>
 </rss>

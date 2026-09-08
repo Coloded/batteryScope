@@ -16,6 +16,17 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Select SDK supporting current Metal capabilities
+        shell: bash
+        run: |
+          python3 - <<'PYCODE'
+          import glob, re, subprocess
+          candidates = glob.glob('/Applications/Xcode_26*.app/Contents/Developer')
+          if not candidates:
+              raise SystemExit('Xcode 26 or newer is required for current Metal capability checks')
+          selected = max(candidates, key=lambda p: tuple(map(int, re.findall(r'\d+', p))))
+          subprocess.run(['sudo', 'xcode-select', '-s', selected], check=True)
+          PYCODE
       - name: Validate version, sources, universal bundle and Ed25519 signature
         shell: bash
         run: |
