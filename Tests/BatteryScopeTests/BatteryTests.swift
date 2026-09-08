@@ -94,9 +94,10 @@ import Foundation
         XCTAssertEqual(b.percent, 44); XCTAssertNil(b.health); XCTAssertTrue(b.charging == true); XCTAssertEqual(b.connection, "Wi-Fi")
     }
     func testMobileRealisticDiagnostics() {
-        let raw: [String: Any] = ["IORegistry": ["AppleRawMaxCapacity": 4677, "DesignCapacity": 4768, "CurrentCapacity": 62, "MaxCapacity": 100, "CycleCount": 283, "Temperature": 3909]]
-        let b = DeviceParser.mobile(id: "test", info: ["ProductType": "iPhone18,2"], basic: ["BatteryCurrentCapacity": 62], diagnostics: raw, network: false)
-        XCTAssertEqual(b.percent, 62); XCTAssertEqual(b.cycles, 283); XCTAssertEqual(b.full, 4677); XCTAssertEqual(b.temperature, 39.09)
+        // Synthetic protocol fixture; no measurements or identifiers from a real device.
+        let raw: [String: Any] = ["IORegistry": ["AppleRawMaxCapacity": 4200, "DesignCapacity": 5000, "CurrentCapacity": 60, "MaxCapacity": 100, "CycleCount": 100, "Temperature": 3000]]
+        let b = DeviceParser.mobile(id: "test", info: ["ProductType": "iPhone99,1"], basic: ["BatteryCurrentCapacity": 60], diagnostics: raw, network: false)
+        XCTAssertEqual(b.percent, 60); XCTAssertEqual(b.cycles, 100); XCTAssertEqual(b.full, 4200); XCTAssertEqual(b.temperature, 30)
     }
     func bluetoothFixture(live: Bool, name: String, type: String, fields: [String: Any] = [:]) -> [String: Any] {
         var d: [String: Any] = ["device_address": "AA:BB:CC:DD:EE:FF", "device_vendorID": "0x004C", "device_minorType": type]

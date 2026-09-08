@@ -12,3 +12,14 @@ dist/*
 *.p8
 .env*
 __pycache__/
+
+# Personal runtime data and user exports must never be published.
+history.json
+BatteryScope-History-v*/
+exports/
+private-data/
+*.db
+*.db-*
+BatteryScope-history*.csv
+BatteryScope-report*.html
+BatteryScope-specifications*.json
