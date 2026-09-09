@@ -15,6 +15,7 @@ enum Command {
         if let bundled = bundledPath(name) { return bundled }
         return ["/opt/homebrew/bin/", "/usr/local/bin/", "/usr/bin/", "/usr/sbin/"].map { $0 + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
+    @TaskLocal static var generation: UInt64?
     static func run(_ name: String, _ args: [String], timeout: TimeInterval = 12) throws -> Data {
         guard let path = path(name) else { throw ReaderError.message("Не найдена системная утилита \(name).") }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -24,9 +25,14 @@ enum Command {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path); process.arguments = args
         process.standardOutput = handle; process.standardError = handle
-        try process.run()
+        try CommandActivity.shared.start(process, generation: generation)
+        defer { CommandActivity.shared.finish(process) }
         let deadline = Date().addingTimeInterval(timeout)
-        while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+        while process.isRunning && Date() < deadline {
+            try CommandActivity.shared.check(generation)
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        try CommandActivity.shared.check(generation)
         if process.isRunning {
             process.terminate()
             Thread.sleep(forTimeInterval: 0.1)
@@ -44,4 +50,33 @@ enum Command {
         return try PropertyListSerialization.propertyList(from: data, format: nil)
     }
 
+}
+
+/// Serializes process start against sleep/cancellation; never waits for exit on the UI thread.
+final class CommandActivity: @unchecked Sendable {
+    static let shared = CommandActivity()
+    private let lock = NSLock()
+    private var epoch: UInt64 = 0
+    private var sleeping = false
+    private var processes: [ObjectIdentifier: Process] = [:]
+    var generation: UInt64 { lock.lock(); defer { lock.unlock() }; return epoch }
+    func check(_ generation: UInt64?) throws {
+        lock.lock(); defer { lock.unlock() }
+        if sleeping || (generation != nil && generation != epoch) { throw CancellationError() }
+    }
+    func start(_ process: Process, generation: UInt64?) throws {
+        lock.lock(); defer { lock.unlock() }
+        if sleeping || (generation != nil && generation != epoch) { throw CancellationError() }
+        try process.run()
+        processes[ObjectIdentifier(process)] = process
+    }
+    func finish(_ process: Process) {
+        lock.lock(); defer { lock.unlock() }
+        processes.removeValue(forKey: ObjectIdentifier(process))
+    }
+    func cancel(sleeping: Bool) {
+        lock.lock(); defer { lock.unlock() }
+        self.sleeping = sleeping; epoch &+= 1
+        for process in processes.values where process.isRunning { kill(process.processIdentifier, SIGKILL) }
+    }
 }

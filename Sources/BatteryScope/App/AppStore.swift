@@ -3,6 +3,9 @@ import UserNotifications
 import AppKit
 
 @MainActor final class Store: ObservableObject {
+    @Published var sleeping = false
+    var sleepObservers: [NSObjectProtocol] = []
+    var workGeneration = UUID()
     @Published var devices: [Battery] = []
     @Published var history: [Sample] = []
     @Published var messages: [String] = []
@@ -45,6 +48,7 @@ import AppKit
     }
     var syncWorker: Task<HistorySyncResult, Error>?
     var syncGeneration = UUID()
+    var syncRestartRequested = false
     var lastSyncAttempt = Date.distantPast
     var notified = Set<String>()
     @Published var lowPowerMode = false
@@ -69,7 +73,7 @@ import AppKit
             var archived = sample.battery
             archived.available = false
             archived.connection = "История · " + (sample.sourceMacName ?? "этот Mac")
-            archived.note = "Последнее измерение: \(archived.date.formatted()). Новые данные появятся после запуска BatteryScope на исходном Mac и доставки файлов iCloud."
+            archived.note = "Последнее измерение: \(archived.date.formatted()). Для новых данных нажмите «Обновить» на исходном Mac; для истории другого Mac также выполните обмен iCloud."
             result.append(archived)
         }
         return result
@@ -80,31 +84,26 @@ import AppKit
         return device.map { $0.value($0.percent, suffix: "%") } ?? ""
     }
 
-    init() {
-        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("BatteryScope")
+    init(historyFolder: URL? = nil, observeSystemEvents: Bool = true) {
+        let folder = historyFolder ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("BatteryScope")
         databaseURL = folder.appendingPathComponent("BatteryScope.sqlite")
         do {
             database = try HistoryDatabase(url: databaseURL, legacyURL: folder.appendingPathComponent("history.json"))
             history = try database!.load()
         } catch { self.error = "Не удалось открыть базу: \(error.localizedDescription). Старый JSON сохранён без изменений." }
         for sample in history { lastSaved[sample.battery.id] = max(lastSaved[sample.battery.id] ?? .distantPast, sample.battery.date) }
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in Task { @MainActor in await self?.scheduledRefresh() } }
-        timer?.tolerance = 5
         updateSystemCondition()
-        powerMonitor = PowerEventMonitor { [weak self] in Task { @MainActor in await self?.refreshMac() } }
-        powerTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                let quiet = self.reducedPolling || !NSApp.windows.contains(where: { $0.isVisible && $0.title == "BatteryScope" })
-                if !quiet || Date().timeIntervalSince(self.lastMacRead) >= 30 { await self.refreshMac() }
-            }
-        }
-        powerTimer?.tolerance = 1
+        if observeSystemEvents { observeSleep() }
+        configurePolling()
     }
+
     func refresh() async {
-        guard !busy else { return }; busy = true
+        guard !sleeping, !busy else { return }; busy = true
+        let generation = workGeneration
+        defer { busy = false }
         let result = await DeviceReader.scan(network: wifi, bluetooth: bluetooth)
-        devices = result.devices; messages = result.messages; busy = false
+        guard !sleeping, generation == workGeneration else { return }
+        devices = result.devices; messages = result.messages
         lastPeripheralScan = Date(); await refreshMac()
         if current == nil { selected = "mac" }
         for b in devices where b.isLive && (b.id == "mac" || b.percent != nil || b.components?.isEmpty == false) {
@@ -117,7 +116,7 @@ import AppKit
                 catch { self.error = error.localizedDescription }
             }
         }
-        if historySyncEnabled && Date().timeIntervalSince(lastSyncAttempt) >= 300 {
+        if !sleeping && historySyncEnabled && Date().timeIntervalSince(lastSyncAttempt) >= 300 {
             await syncHistory()
         }
     }

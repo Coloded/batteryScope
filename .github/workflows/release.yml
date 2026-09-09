@@ -34,6 +34,8 @@ jobs:
           version="$(plutil -extract CFBundleShortVersionString raw Info.plist)"
           test "$GITHUB_REF_NAME" = "v$version"
           bash scripts/test.sh
+          zsh scripts/fetch-sparkle.sh
+          bash scripts/test-background-work.sh
           python3 scripts/validate-release.py
       - name: Publish GitHub Release
         env:

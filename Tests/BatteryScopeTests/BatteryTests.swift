@@ -3,6 +3,7 @@ import Foundation
 @main struct BatteryTests {
     static func main() throws {
         let suite = BatteryTests()
+        try suite.testSleepCancelsCommandsAndRejectsStaleWork()
         suite.testModernMacDoesNotTreatPercentAsMilliampHours()
         suite.testLegacyMacCapacity()
         suite.testMissingAndZeroCapacityDoNotInventHealth()
@@ -35,7 +36,7 @@ import Foundation
         suite.testPowerPreservesZeroAndRejectsBadCurrent()
         try suite.testPowerHistoryAndPeerReceipts()
         suite.testCloudPlaceholderResolution()
-        print("PASS: 32 tests (battery, SQLite, technical data, Russian labels, units, exports)")
+        print("PASS: 33 tests (battery, SQLite, technical data, Russian labels, units, exports)")
         if CommandLine.arguments.contains("--live-devices") {
             let phones = DeviceReader.mobile(network: true)
             XCTAssertTrue(phones.messages.isEmpty)
@@ -157,6 +158,22 @@ import Foundation
         XCTAssertNil(old.battery.power)
     }
     func parse(_ values: [String: Any]) -> Battery { BatteryParser.parse(values, id: "mac", name: "Test", model: "MacBook", connection: "Этот Mac") }
+    func testSleepCancelsCommandsAndRejectsStaleWork() throws {
+        let gate = CommandActivity.shared
+        let old = gate.generation
+        let process = Process(); process.executableURL = URL(fileURLWithPath: "/bin/sleep"); process.arguments = ["30"]
+        try gate.start(process, generation: old)
+        defer { gate.finish(process); gate.cancel(sleeping: false) }
+        gate.cancel(sleeping: true)
+        process.waitUntilExit()
+        XCTAssertFalse(process.isRunning)
+        do { try gate.check(nil); preconditionFailure("Sleeping must reject new commands") } catch is CancellationError {}
+        gate.cancel(sleeping: false)
+        do { try gate.check(old); preconditionFailure("Wake must not revive cancelled work") } catch is CancellationError {}
+        try gate.check(gate.generation)
+        let data = try Command.$generation.withValue(gate.generation) { try Command.run("true", []) }
+        XCTAssertTrue(data.isEmpty)
+    }
     func testModernMacDoesNotTreatPercentAsMilliampHours() {
         let b = parse(["CurrentCapacity": 80, "MaxCapacity": 100, "AppleRawMaxCapacity": 4500, "DesignCapacity": 5000, "Temperature": 3012, "Voltage": 12000])
         XCTAssertEqual(b.percent, 80); XCTAssertEqual(b.health, 90); XCTAssertEqual(b.temperature, 30.12); XCTAssertEqual(b.voltage, 12)

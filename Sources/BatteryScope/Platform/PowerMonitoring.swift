@@ -19,8 +19,6 @@ final class PowerEventMonitor {
             let center = NotificationCenter.default
             observers.append((center, center.addObserver(forName: name, object: nil, queue: .main) { _ in onChange() }))
         }
-        let center = NSWorkspace.shared.notificationCenter
-        observers.append((center, center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in onChange() }))
     }
     deinit {
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
@@ -43,6 +41,7 @@ extension Store {
         lowPowerMode || ProcessInfo.processInfo.thermalState == .serious || ProcessInfo.processInfo.thermalState == .critical
     }
     func scheduledRefresh() async {
+        guard !sleeping else { return }
         updateSystemCondition()
         if !reducedPolling || Date().timeIntervalSince(lastPeripheralScan) >= 300 { await refresh() }
         else {
@@ -51,11 +50,13 @@ extension Store {
         }
     }
     func refreshMac() async {
-        guard !macRefreshBusy, Date().timeIntervalSince(lastMacRead) > 0.5 else { return }
+        guard !sleeping, !macRefreshBusy, Date().timeIntervalSince(lastMacRead) > 0.5 else { return }
+        let generation = workGeneration
         macRefreshBusy = true
         defer { macRefreshBusy = false }
         updateSystemCondition()
         let battery = await Task.detached(priority: .utility) { BatteryReader.mac() }.value
+        guard !sleeping, generation == workGeneration else { return }
         lastMacRead = Date()
         if let index = devices.firstIndex(where: { $0.id == "mac" }) { devices[index] = battery }
         else { devices.insert(battery, at: 0) }

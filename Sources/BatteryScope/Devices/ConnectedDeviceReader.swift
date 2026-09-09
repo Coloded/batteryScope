@@ -125,8 +125,13 @@ enum DeviceReader {
         } catch { return ScanResult(devices: [], messages: ["Bluetooth: \(error.localizedDescription)"]) }
     }
     static func scan(network: Bool, bluetooth: Bool) async -> ScanResult {
-        async let mobileResult = Task.detached(priority: .utility) { mobile(network: network) }.value
-        async let accessoryResult = Task.detached(priority: .utility) { bluetooth ? accessories() : ScanResult(devices: [], messages: []) }.value
+        let generation = CommandActivity.shared.generation
+        async let mobileResult = Task.detached(priority: .utility) {
+            Command.$generation.withValue(generation) { mobile(network: network) }
+        }.value
+        async let accessoryResult = Task.detached(priority: .utility) {
+            Command.$generation.withValue(generation) { bluetooth ? accessories() : ScanResult(devices: [], messages: []) }
+        }.value
         let local = BatteryReader.mac()
         let (phones, peripherals) = await (mobileResult, accessoryResult)
         return ScanResult(devices: [local] + phones.devices + peripherals.devices, messages: phones.messages + peripherals.messages)

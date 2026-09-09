@@ -63,6 +63,7 @@ struct HistorySyncResult {
 enum HistoryFolderSync {
     static let subdirectory = "BatteryScope-History-v1"
     static func exchange(folder: URL, samples: [Sample], macID: String, macName: String) throws -> HistorySyncResult {
+        try Task.checkCancellation()
         let scoped = folder.startAccessingSecurityScopedResource()
         defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
         var directory: ObjCBool = false
@@ -131,10 +132,11 @@ enum HistoryFolderSync {
         return result
     }
     static func coordinatedWrite(_ url: URL, coordinator: NSFileCoordinator, action: (URL) throws -> Void) throws {
+        try Task.checkCancellation()
         var operationError: Error?
         var coordinationError: NSError?
         coordinator.coordinate(writingItemAt: url, options: [], error: &coordinationError) { coordinated in
-            do { try action(coordinated) } catch { operationError = error }
+            do { try Task.checkCancellation(); try action(coordinated) } catch { operationError = error }
         }
         if let coordinationError { throw coordinationError }
         if let operationError { throw operationError }

@@ -6,6 +6,7 @@ extension Store {
         syncGeneration = UUID()
         syncWorker?.cancel()
         historySyncEnabled = enabled
+        syncRestartRequested = enabled
         if !enabled { syncStatus = "Обмен выключен. Локальная история и файлы в общей папке сохранены."; return }
         if UserDefaults.standard.data(forKey: "historySyncFolderBookmark") == nil { setupICloud() }
         else { Task { await syncHistory() } }
@@ -34,6 +35,7 @@ extension Store {
         do {
             let bookmark = try folder.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
             syncGeneration = UUID(); syncWorker?.cancel(); syncPeers = []
+            syncRestartRequested = true
             UserDefaults.standard.set(bookmark, forKey: "historySyncFolderBookmark")
             syncFolderName = folder.path; historySyncEnabled = true
             Task { await syncHistory() }
@@ -50,13 +52,14 @@ extension Store {
         } catch { self.error = error.localizedDescription }
     }
     func syncHistory() async {
-        guard historySyncEnabled, !syncBusy, let database else { return }
+        guard !sleeping, historySyncEnabled, !syncBusy, let database else { return }
         syncBusy = true; lastSyncAttempt = Date()
+        syncRestartRequested = false
         let generation = syncGeneration
         defer {
             syncBusy = false; syncWorker = nil
             // A changed folder must wait for the previous coordinated operation to finish.
-            if generation != syncGeneration && historySyncEnabled { Task { await syncHistory() } }
+            if syncRestartRequested && historySyncEnabled && !sleeping { Task { await syncHistory() } }
         }
         do {
             guard let bookmark = UserDefaults.standard.data(forKey: "historySyncFolderBookmark") else {
