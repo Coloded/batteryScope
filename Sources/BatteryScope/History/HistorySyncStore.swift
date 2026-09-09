@@ -17,7 +17,7 @@ extension Store {
         panel.allowsMultipleSelection = false; panel.canCreateDirectories = true
         panel.directoryURL = CloudFolder.drive
         panel.prompt = "Выбрать для истории"
-        panel.message = "Выберите одну и ту же папку в iCloud Drive на всех Mac. В неё будут записаны история измерений, имена и идентификаторы устройств. Подробная диагностика останется на этом Mac."
+        panel.message = "Выберите одну и ту же папку в iCloud Drive на всех Mac. В неё будут записаны история измерений, краткая конфигурация Mac, имена и идентификаторы устройств. Подробная диагностика останется на этом Mac."
         guard panel.runModal() == .OK, let folder = panel.url else {
             if UserDefaults.standard.data(forKey: "historySyncFolderBookmark") == nil { historySyncEnabled = false }
             return

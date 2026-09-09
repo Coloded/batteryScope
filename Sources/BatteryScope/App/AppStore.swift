@@ -104,10 +104,12 @@ import AppKit
         let result = await DeviceReader.scan(network: wifi, bluetooth: bluetooth)
         guard !sleeping, generation == workGeneration else { return }
         devices = result.devices; messages = result.messages
+        updateAccessoryTechnicalRecords()
         lastPeripheralScan = Date(); await refreshMac()
+        await notifyBatteryWear()
         if current == nil { selected = "mac" }
         for b in devices where b.isLive && (b.id == "mac" || b.percent != nil || b.components?.isEmpty == false) {
-            if Date().timeIntervalSince(lastSaved[b.id] ?? .distantPast) >= 3600 { save(b) }
+            if Date().timeIntervalSince(lastSaved[b.id] ?? .distantPast) >= 3600 || (b.id == "mac" && history.last(where: { $0.battery.id == "mac" })?.battery.summary == nil) { save(b) }
             let low = b.percent.map { $0 <= threshold } == true || (b.id == "mac" && b.minutes.map { $0 <= timeThreshold } == true)
             if !low || b.external == true { notified.remove(b.id) }
             if alerts && low && b.external != true && b.charging != true && !notified.contains(b.id) {

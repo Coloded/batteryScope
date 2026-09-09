@@ -4,6 +4,9 @@ cd "$(dirname "$0")/.."
 test_dir="${TMPDIR:-/tmp}/batteryscope-tests"
 mkdir -p "$test_dir"
 test_sources=(
+  Sources/BatteryScope/Domain/BatteryAssessment.swift
+  Sources/BatteryScope/Domain/ObservationSeries.swift
+  Sources/BatteryScope/Domain/DeviceSummary.swift
   Sources/BatteryScope/Domain/Battery.swift
   Sources/BatteryScope/Domain/PowerReadings.swift
   Sources/BatteryScope/Infrastructure/SystemCommand.swift

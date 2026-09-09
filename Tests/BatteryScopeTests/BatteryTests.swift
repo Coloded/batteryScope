@@ -36,7 +36,9 @@ import Foundation
         suite.testPowerPreservesZeroAndRejectsBadCurrent()
         try suite.testPowerHistoryAndPeerReceipts()
         suite.testCloudPlaceholderResolution()
-        print("PASS: 33 tests (battery, SQLite, technical data, Russian labels, units, exports)")
+        suite.testObservationSeriesByDevice()
+        suite.testBatteryWearAssessment()
+        print("PASS: 35 tests (battery, SQLite, technical data, Russian labels, units, exports)")
         if CommandLine.arguments.contains("--live-devices") {
             let phones = DeviceReader.mobile(network: true)
             XCTAssertTrue(phones.messages.isEmpty)
@@ -53,9 +55,50 @@ import Foundation
             for b in peripherals.devices { print("ACCESSORY: \(b.model), live \(b.isLive), charge \(b.value(b.percent))") }
         }
     }
+    func testBatteryWearAssessment() {
+        var b = Battery(id: "mac", name: "Synthetic Laptop", model: "Laptop", connection: "Local")
+        b.percent = 1; b.cycles = 2000
+        XCTAssertTrue(b.assessment == nil)
+        b.details = ["BatteryFaultNotificationType": "SyntheticFault", "BatteryStatusFlags": "4"]
+        XCTAssertTrue(b.assessment == nil)
+        b.full = 3900; b.design = 5000
+        XCTAssertEqual(b.assessment?.severity, 1)
+        b.full = 4000
+        XCTAssertTrue(b.assessment == nil)
+        b.batteryCondition = "Check Battery"
+        XCTAssertEqual(b.assessment?.severity, 2)
+        b.available = false
+        XCTAssertEqual(b.assessment?.severity, 2)
+        b.id = "bt:synthetic"
+        XCTAssertTrue(b.assessment == nil)
+        b.id = "mac"; b.hasInternalBattery = false
+        XCTAssertTrue(b.assessment == nil)
+    }
+    func testObservationSeriesByDevice() {
+        var desktop = Battery(id: "mac", name: "Synthetic Desktop", model: "Desktop", connection: "Local")
+        desktop.power = PowerReadings(inputWatts: 0, systemWatts: 22)
+        let desk = ObservationSeries.available([desktop])
+        XCTAssertEqual(Set(desk.map(\.id)), Set(["Потребление системы", "Входная мощность"]))
+        for name in ["Keyboard", "Mouse", "Trackpad"] {
+            var accessory = Battery(id: "bt:test", name: "Synthetic " + name, model: name, connection: "Bluetooth")
+            accessory.percent = 60
+            XCTAssertEqual(ObservationSeries.available([accessory]).map(\.id), ["Заряд"])
+        }
+        var pods = Battery(id: "bt:pods", name: "Synthetic Earbuds", model: "Headphones", connection: "Bluetooth")
+        pods.components = ["Левый наушник": 80, "Правый наушник": 70, "Футляр": 40]
+        XCTAssertEqual(ObservationSeries.available([pods]).count, 3)
+        pods.components = nil
+        XCTAssertTrue(ObservationSeries.available([pods]).isEmpty)
+        var laptop = desktop; laptop.percent = 90; laptop.full = 4500; laptop.design = 5000
+        XCTAssertTrue(ObservationSeries.available([laptop]).contains { $0.id == "Состояние батареи" })
+        laptop.percent = .nan
+        XCTAssertTrue(!ObservationSeries.available([laptop]).contains { $0.id == "Заряд" })
+    }
     func testCloudHistorySeparatesMacsAndKeepsOrigin() throws {
         var battery = parse(["CurrentCapacity": 40, "MaxCapacity": 100])
         battery.details = ["SerialNumber": "private"]
+        battery.summary = ["Процессор": "Synthetic CPU", "Память": "16 GB"]
+        battery.hasInternalBattery = false
         let sample = Sample(battery: battery)
         let envelope = HistoryEnvelope.outgoing(sample, macID: "mac-a", macName: "Mac A")
         let remote = try envelope.incoming(on: "mac-b")
@@ -63,6 +106,14 @@ import Foundation
         XCTAssertEqual(remote.id, sample.id)
         XCTAssertTrue(remote.battery.details.isEmpty)
         XCTAssertEqual(remote.sourceMacName, "Mac A")
+        let roundtrip = try JSONDecoder().decode(HistoryEnvelope.self, from: JSONEncoder().encode(envelope)).incoming(on: "mac-b")
+        XCTAssertEqual(roundtrip.battery.summary?["Процессор"], "Synthetic CPU")
+        XCTAssertEqual(roundtrip.battery.hasInternalBattery, false)
+        var archived = roundtrip.battery; archived.available = false
+        let technical = TechnicalReader.read(archived)
+        XCTAssertEqual(technical.date, archived.date)
+        XCTAssertEqual(technical.sections["Конфигурация и состояние"]?["Память"], "16 GB")
+        XCTAssertTrue(technical.sections["Питание · сохранённое измерение"]?.isEmpty == false)
         let forwarded = HistoryEnvelope.outgoing(remote, macID: "mac-b", macName: "Mac B")
         XCTAssertEqual(forwarded.sample.sourceMacID, "mac-a")
         XCTAssertEqual(try forwarded.incoming(on: "mac-a").battery.id, "mac")

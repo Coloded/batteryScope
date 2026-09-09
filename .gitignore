@@ -36,3 +36,5 @@ BatteryScope-specifications*.json
 /docs/*
 !/docs/UPDATES.md
 !/docs/guide/
+
+/json/

@@ -53,7 +53,7 @@ enum DeviceParser {
                                 let match = hid.first { address($0["DeviceAddress"] as? String ?? $0["SerialNumber"] as? String ?? "") == normalized }
                                 b.percent = percentage(match?["BatteryPercent"]) ?? percentage(fields["device_batteryLevelMain"])
                                 if let match { b.details.merge(BatteryParser.flatten(match), uniquingKeysWith: { _, new in new }) }
-                                b.note = "macOS предоставляет заряд аксессуара. Ёмкость и циклы обычно недоступны."
+                                b.note = "Последние данные macOS. Значение заряда может быть сохранённым; время самого измерения неизвестно."
                             } else {
                                 b.note = "Устройство отключено. Показания ниже — кэш macOS; время измерения неизвестно. Они не сохраняются в историю и не вызывают уведомлений."
                             }

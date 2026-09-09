@@ -39,7 +39,7 @@ struct SettingsView: View {
                             Text("Снимков с этого Mac получено: \(peer.receivedBySource[LocalMacIdentity.id] ?? 0)").font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    Text("Передаются имена, идентификаторы устройств и снимки батарей. Подробная техническая диагностика остаётся локально. Выключение обмена не удаляет ранее переданные файлы. Для надёжной загрузки выберите «Сохранять загруженным» для этой папки в Finder, если команда доступна.").font(.caption).foregroundStyle(.secondary)
+                    Text("Передаются имена, идентификаторы устройств и снимки батарей с краткой конфигурацией Mac. Подробная техническая диагностика остаётся локально. Выключение обмена не удаляет ранее переданные файлы. Для надёжной загрузки выберите «Сохранять загруженным» для этой папки в Finder, если команда доступна.").font(.caption).foregroundStyle(.secondary)
                 }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             }
             GroupBox("Работа приложения") {
@@ -57,7 +57,7 @@ struct SettingsView: View {
             DisclosureGroup("Какие Apple-устройства поддерживаются") {
                 Text("Mac: встроенная батарея. iPhone/iPad/iPod touch: USB и Wi-Fi, диагностика зависит от ОС. Magic Keyboard/Mouse/Trackpad: заряд. AirPods: доступные уровни наушников и футляра из macOS. Apple TV может определяться через доверенное сетевое соединение, но батареи у него нет. Apple Watch, Apple Pencil, AirTag, HomePod не предоставляют этому приложению универсальный доступ к батарее; их поддержка не заявляется. История других Mac доступна через общую папку, если BatteryScope работает на каждом из них.").font(.caption).foregroundStyle(.secondary)
             }
-            Toggle("Уведомлять о низком заряде", isOn: Binding(get: { store.alerts }, set: { store.enableAlerts($0) }))
+            Toggle("Уведомлять о заряде и состоянии аккумулятора", isOn: Binding(get: { store.alerts }, set: { store.enableAlerts($0) }))
             HStack { Text("Порог заряда"); Slider(value: $store.threshold, in: 5...50, step: 5); Text("\(Int(store.threshold))%").frame(width: 45) }
             HStack { Text("Оставшееся время Mac"); Slider(value: $store.timeThreshold, in: 5...60, step: 5); Text("\(Int(store.timeThreshold)) мин").frame(width: 60) }
             Divider()

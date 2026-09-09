@@ -20,6 +20,8 @@ enum BatteryReader {
             for item in list {
                 guard let desc = IOPSGetPowerSourceDescription(info, item)?.takeUnretainedValue() as? [String: Any], desc[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
                 hasInternalBattery = true
+                b.batteryHealth = desc[kIOPSBatteryHealthKey] as? String
+                b.batteryCondition = desc[kIOPSBatteryHealthConditionKey] as? String
                 if let current = desc[kIOPSCurrentCapacityKey] as? Double, let max = desc[kIOPSMaxCapacityKey] as? Double, max > 0 { b.percent = current / max * 100 }
                 b.charging = desc[kIOPSIsChargingKey] as? Bool ?? b.charging
                 b.external = (desc[kIOPSPowerSourceStateKey] as? String).map { $0 == kIOPSACPowerValue } ?? b.external
@@ -27,6 +29,8 @@ enum BatteryReader {
                 b.minutes = (desc[timeKey] as? NSNumber).flatMap { $0.doubleValue > 0 ? $0.doubleValue : nil }
             }
         }
+        b.summary = DeviceSummary.local()
+        b.hasInternalBattery = hasInternalBattery
         b.power = PowerReadings.read(d, external: b.external)
         if !hasInternalBattery { b.note = "Встроенная батарея не обнаружена. На настольных Mac показатели аккумулятора недоступны."; b.percent = nil; b.cycles = nil; b.amperage = nil }
         return b

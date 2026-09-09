@@ -3,16 +3,30 @@ import Charts
 
 struct HistoryView: View {
     @EnvironmentObject var store: Store
-    @State private var showHealth = false
+    @State private var selectedMetric = "Заряд"
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Снимки сохраняются автоматически раз в час, пока приложение запущено, и вручную кнопкой в обзоре.").foregroundStyle(.secondary)
-            if store.samples.isEmpty { empty("История пока пуста", "Подключите устройство с батареей. Снимки сохраняются отдельно для каждого устройства.") }
+            if store.samples.isEmpty { empty("История пока пуста", "Сохраните первый снимок в обзоре. Снимки сохраняются отдельно для каждого устройства.") }
             else {
-                Toggle("Показать состояние батареи вместо заряда", isOn: $showHealth)
-                Chart(store.samples) { s in if let health = (showHealth ? s.battery.health : s.battery.percent) { LineMark(x: .value("Дата", s.battery.date), y: .value("Состояние, %", health)); PointMark(x: .value("Дата", s.battery.date), y: .value("Состояние, %", health)) } }.foregroundStyle(.mint).frame(height: 240)
-                HStack { Text("\(showHealth ? "Состояние" : "Заряд") · \(store.samples.count) снимков").font(.headline); Spacer(); Button("Экспорт CSV") { store.exportCSV() } }
-                ForEach(store.samples.reversed().prefix(100)) { s in HStack { Text(s.battery.date.formatted()); Spacer(); Text(s.battery.value((showHealth ? s.battery.health : s.battery.percent), suffix: "%", digits: 1)); Text(s.battery.value(s.battery.cycles, suffix: " циклов")).foregroundStyle(.secondary) }.font(.callout).padding(.vertical, 6); Divider() }
+                let choices = ObservationSeries.available(store.samples.map(\.battery))
+                let chosen = choices.first(where: { $0.id == selectedMetric }) ?? choices.first
+                if let chosen {
+                    Picker("Показатель", selection: Binding(get: { chosen.id }, set: { selectedMetric = $0 })) {
+                        ForEach(choices) { item in Text(item.id + ", " + item.unit).tag(item.id) }
+                    }
+                    Chart(store.samples) { sample in
+                        if let value = chosen.read(sample.battery), value.isFinite {
+                            PointMark(x: .value("Дата", sample.battery.date), y: .value(chosen.unit, value))
+                        }
+                    }.foregroundStyle(.mint).frame(height: 180)
+                    HStack { Text("\(chosen.id) · \(chosen.values(store.samples.map(\.battery)).count) измерений").font(.headline); Spacer(); Button("Экспорт CSV") { store.exportCSV() } }
+                    ForEach(store.samples.reversed().filter { chosen.read($0.battery) != nil }.prefix(100)) { sample in
+                        HStack { Text(sample.battery.date.formatted()); Spacer(); Text(sample.battery.value(chosen.read(sample.battery), suffix: " " + chosen.unit, digits: 1)) }.font(.callout).padding(.vertical, 4)
+                        Divider()
+                    }
+                } else { Text("Снимки есть, но числовые показатели в них отсутствуют.").foregroundStyle(.secondary) }
+
             }
             DisclosureGroup("Общая история всех устройств · \(store.history.count) снимков") {
                 Button("Экспорт общей истории в CSV") { store.exportCSV(all: true) }
@@ -27,7 +41,9 @@ struct HistoryView: View {
                         }
                         Spacer()
                         Text(sample.battery.date.formatted()).font(.caption)
-                        Text(sample.battery.value(sample.battery.percent, suffix: "%"))
+                        if let item = ObservationSeries.available([sample.battery]).first {
+                            Text(sample.battery.value(item.read(sample.battery), suffix: " " + item.unit))
+                        }
                     }.padding(.vertical, 4)
                 }
                 Text("Показаны последние 100 снимков. Экспорт содержит всю историю.").font(.caption).foregroundStyle(.secondary)

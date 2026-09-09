@@ -18,7 +18,7 @@ struct DeviceSelectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("УСТРОЙСТВО").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             NativeDeviceMenu(items: store.knownDevices.map { device in
-                DeviceMenuItem(id: device.id, title: historyLabel(device) == nil ? deviceMenuTitle(device) : device.name,
+                DeviceMenuItem(id: device.id, title: (device.assessment == nil ? "" : "⚠︎ ") + (historyLabel(device) == nil ? deviceMenuTitle(device) : device.name),
                                deviceIcon: device.deviceIcon, trailingSymbol: historyLabel(device)?.symbol,
                                help: historyLabel(device)?.help ?? device.connection)
             }, selection: $store.selected)

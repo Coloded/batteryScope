@@ -39,6 +39,6 @@ extension Battery {
         ("Полная ёмкость", value(full, suffix: " мА·ч")), ("Проектная ёмкость", value(design, suffix: " мА·ч")),
         ("Циклы", value(cycles)), ("Температура", value(temperature, suffix: " °C", digits: 1)),
         ("Напряжение", value(voltage, suffix: " В", digits: 2)), ("Ток", value(amperage, suffix: " мА")),
-        ("Поток мощности батареи", value(watts, suffix: " Вт", digits: 1)), ("Вход от адаптера в Mac", value(power?.inputWatts, suffix: " Вт", digits: 1)), ("Потребление системы (телеметрия)", value(power?.systemWatts, suffix: " Вт", digits: 1)), ("Мощность адаптера по данным устройства", value(power?.adapterRatingWatts, suffix: " Вт")), ("Оставшееся время", value(minutes, suffix: " мин")), ("Питание", state)
+        ("Поток мощности батареи", value(watts, suffix: " Вт", digits: 1)), ("Вход от адаптера в Mac", value(power?.inputWatts, suffix: " Вт", digits: 1)), ("Потребление системы (телеметрия)", value(power?.systemWatts, suffix: " Вт", digits: 1)), ("Мощность адаптера по данным устройства", value(power?.adapterRatingWatts, suffix: " Вт")), ("Оставшееся время", value(minutes, suffix: " мин")), (isAccessory ? "Подключение" : "Питание", isAccessory ? (isLive ? "Подключено" : "Не подключено") : state)
     ] + (components ?? [:]).keys.sorted().map { ($0 + (isLive ? "" : " (кэш)"), value(components?[$0], suffix: "%")) } }
 }

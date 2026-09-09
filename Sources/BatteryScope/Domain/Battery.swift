@@ -24,6 +24,18 @@ struct Battery: Codable, Identifiable {
     var components: [String: Double]? = nil
     var power: PowerReadings? = nil
     var currentSource: String? = nil
+    var batteryHealth: String? = nil
+    var batteryCondition: String? = nil
+    var summary: [String: String]? = nil
+    var hasInternalBattery: Bool? = nil
+    var isAccessory: Bool { id.hasPrefix("bt:") }
+    var isDesktop: Bool { (id == "mac" || id.hasPrefix("mac:")) && hasInternalBattery == false }
+    var snapshotPowerState: String {
+        if charging == true { return "Заряжается" }
+        if external == true { return "Питание подключено" }
+        if external == false { return "От аккумулятора" }
+        return "Состояние питания неизвестно"
+    }
     var isLive: Bool { available != false }
     var health: Double? { guard let full, let design, full > 0, design > 0 else { return nil }; return full / design * 100 }
     var watts: Double? { guard let voltage, let amperage, voltage.isFinite, amperage.isFinite, abs(amperage) <= 20000 else { return nil }; return voltage * amperage / 1000 }
