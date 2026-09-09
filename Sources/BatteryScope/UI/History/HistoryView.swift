@@ -20,7 +20,10 @@ struct HistoryView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text(sample.battery.name)
-                            Text(sample.sourceMacName ?? "Этот Mac").font(.caption).foregroundStyle(.secondary)
+                            if let source = sample.sourceMacName,
+                               source.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(sample.battery.name.trimmingCharacters(in: .whitespacesAndNewlines)) != .orderedSame {
+                                Text("Источник: " + source).font(.caption).foregroundStyle(.secondary)
+                            }
                         }
                         Spacer()
                         Text(sample.battery.date.formatted()).font(.caption)

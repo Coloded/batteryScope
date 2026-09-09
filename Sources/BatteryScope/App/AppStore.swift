@@ -72,7 +72,7 @@ import AppKit
         for sample in history.reversed() where seen.insert(sample.battery.id).inserted {
             var archived = sample.battery
             archived.available = false
-            archived.connection = "История · " + (sample.sourceMacName ?? "этот Mac")
+            archived.connection = sample.sourceMacID.map { $0 != LocalMacIdentity.id } == true ? "Из iCloud" : "Сохранённые данные"
             archived.note = "Последнее измерение: \(archived.date.formatted()). Для новых данных нажмите «Обновить» на исходном Mac; для истории другого Mac также выполните обмен iCloud."
             result.append(archived)
         }
