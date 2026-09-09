@@ -3,21 +3,22 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.6.1</title>
-            <pubDate>Wed, 09 Sep 2026 10:45:58 +0300</pubDate>
+            <title>0.6.2</title>
+            <pubDate>Wed, 09 Sep 2026 13:18:29 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>9</sparkle:version>
-            <sparkle:shortVersionString>0.6.1</sparkle:shortVersionString>
+            <sparkle:version>10</sparkle:version>
+            <sparkle:shortVersionString>0.6.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.6.1
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.6.2
 
-- Во время сна Mac приложение приостанавливает опрос и обмен историей, завершает собственные вспомогательные процессы и отклоняет отменённые запросы.
-- После пробуждения обычный опрос возобновляется с нового интервала, без выполнения пропущенных за ночь обновлений.
-- Приложение не планирует пробуждения и не удерживает Mac от сна. Пока Mac бодрствует, показания, график и общая история обновляются как прежде.
+- Для истории с другого Mac справа от названия устройства показано облако со стрелкой вниз. Для локального снимка — часы.
+- Убраны повторные названия устройств и длинная подпись «История» в меню. Под выбранным устройством показано «Из iCloud» или «Сохранённые данные»; дата измерения доступна в подсказке.
+- В общей истории имя источника не повторяется, если совпадает с названием устройства.
+- Сохранена защита сна из 0.6.1: обычное автоматическое обновление при бодрствовании, пауза опроса и вспомогательных процессов во время сна.
 
-Существующая история сохраняется. Apple Silicon и Intel, macOS 13+.
+История SQLite сохраняется. Установщик не содержит личные данные. Apple Silicon и Intel, macOS 13+.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.6.1/BatteryScope-stable.dmg" length="10345484" type="application/octet-stream" sparkle:edSignature="B4Y+9OampxJDJnjXgSCnuJaSIod0mt01c1XOCmOhFw29z7jp0Yv5zydiVdnJnSUrKy6nWmzQ27PpnxipZz+zCQ=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.6.2/BatteryScope-stable.dmg" length="10371290" type="application/octet-stream" sparkle:edSignature="aGk/+9pcGubhbvWA9gy2d0WsNe6jBWeAXvhmrkGUyDt8KctMFsNOVIbjSPJqWgW6F5tJvDYkc5uMMoKIepIYDg=="/>
         </item>
     </channel>
 </rss>
