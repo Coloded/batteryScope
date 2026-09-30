@@ -57,11 +57,17 @@ extension Store {
         updateSystemCondition()
         let battery = await Task.detached(priority: .utility) { BatteryReader.mac() }.value
         guard !sleeping, generation == workGeneration else { return }
+        let previous = history.filter { $0.battery.id == "mac" }.max { $0.battery.date < $1.battery.date }?.battery
+        let powerChanged = previous.map { $0.external != battery.external || $0.charging != battery.charging } ?? false
         lastMacRead = Date()
         if let index = devices.firstIndex(where: { $0.id == "mac" }) { devices[index] = battery }
         else { devices.insert(battery, at: 0) }
         livePower.append(LivePowerSample(date: battery.date, battery: battery.watts, input: battery.power?.inputWatts, system: battery.power?.systemWatts))
         livePower.removeAll { Date().timeIntervalSince($0.date) > 1800 }
         if livePower.count > 500 { livePower.removeFirst(livePower.count - 500) }
+        if powerChanged && historySyncEnabled {
+            saveSyncSnapshots()
+            Task { await syncHistory() }
+        }
     }
 }

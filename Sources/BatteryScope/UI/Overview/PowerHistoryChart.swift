@@ -85,8 +85,8 @@ struct PowerHistoryChart: View {
                     }
                 }
             }
-            .frame(height: 180)
+            .frame(height: 115)
             Text("Время · наведите курсор для точного значения").font(.caption).foregroundStyle(.secondary)
-        }.padding(12).background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
+        }.padding(8).background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
     }
 }

@@ -22,21 +22,11 @@ struct PowerPanel: View {
         }
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(device.isDesktop ? "История мощности" : "Питание и зарядка").font(.headline)
-            if !device.isDesktop {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                if device.power?.inputWatts != nil { metric("Вход от адаптера", device.value(device.power?.inputWatts, suffix: " Вт", digits: 1), "SystemPowerIn · питание всего Mac") }
-                if device.power?.systemWatts != nil { metric("Потребление системы", device.value(device.power?.systemWatts, suffix: " Вт", digits: 1), "SystemLoad · телеметрия контроллера") }
-                if device.watts != nil { metric("Поток батареи", device.value(device.watts, suffix: " Вт", digits: 1), "U × I · + в батарею, − из батареи по знаку датчика") }
-                if device.power?.adapterRatingWatts != nil { metric("Мощность адаптера", device.value(device.power?.adapterRatingWatts, suffix: " Вт"), "Данные адаптера, не текущее потребление") }
-            }
-            }
-            Text("Телеметрия Mac, без потерь блока питания.").font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
             if device.id == "mac" || device.id.hasPrefix("mac:") {
                 if !device.isDesktop {
                 HStack {
-                    if let thermal = device.summary?["Тепловое состояние"] { Label("Тепловое состояние: " + thermal, systemImage: "thermometer.medium") }
+                    if let thermal = device.summary?["Тепловое состояние"] { Label(thermal, systemImage: "thermometer.medium") }
                     Spacer()
                     if let mode = device.summary?["Энергосбережение"] { Text("Энергосбережение: " + mode) }
                 }.font(.caption)
@@ -47,7 +37,7 @@ struct PowerPanel: View {
                     Text("Потребление системы").tag("Потребление системы")
                 }.pickerStyle(.segmented).labelsHidden()
                 if !(device.id == "mac" && device.isLive) {
-                    Picker("Период до последнего снимка", selection: $historyHours) {
+                    Picker("Период", selection: $historyHours) {
                         Text("24 часа").tag(24)
                         Text("7 дней").tag(168)
                         Text("Все").tag(0)
@@ -58,7 +48,12 @@ struct PowerPanel: View {
                 } else { Text("Для выбранного показателя пока нет измерений.").font(.caption).foregroundStyle(.secondary) }
                 Text(device.id == "mac" && device.isLive ? "Последние 30 минут текущего запуска" : "Сохранённые измерения до последнего снимка · до 1000 точек").font(.caption).foregroundStyle(.secondary)
             }
-        }.onAppear { if device.isDesktop { series = "Потребление системы" } }
-        .onChange(of: device.isDesktop) { desktop in if desktop { series = "Потребление системы" } }
+        }.onAppear { chooseSeries() }
+        .onChange(of: device.id) { _ in chooseSeries() }
+    }
+    private func chooseSeries() {
+        if device.power?.systemWatts != nil { series = "Потребление системы" }
+        else if device.watts != nil && !device.isDesktop { series = "Поток батареи" }
+        else { series = "Вход от адаптера" }
     }
 }

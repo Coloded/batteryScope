@@ -101,6 +101,12 @@ import AppKit
         guard !sleeping, !busy else { return }; busy = true
         let generation = workGeneration
         defer { busy = false }
+        // Receive cloud history before a potentially slow peripheral scan.
+        if forceSync && historySyncEnabled {
+            await refreshMac()
+            await syncHistory(forceSnapshot: true)
+            guard !sleeping, generation == workGeneration else { return }
+        }
         let result = await DeviceReader.scan(network: wifi, bluetooth: bluetooth)
         guard !sleeping, generation == workGeneration else { return }
         devices = result.devices; messages = result.messages
@@ -119,7 +125,7 @@ import AppKit
             }
         }
         if !sleeping && historySyncEnabled && (forceSync || Date().timeIntervalSince(lastSyncAttempt) >= 300) {
-            await syncHistory()
+            await syncHistory(forceSnapshot: forceSync)
         }
     }
     func save(_ battery: Battery) {

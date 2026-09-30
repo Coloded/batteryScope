@@ -37,6 +37,31 @@ import Foundation
         store.updateAccessoryTechnicalRecords()
         precondition(store.technical[accessory.id]?.sections["Питание аксессуара"]?.isEmpty == true)
         precondition(store.technical[accessory.id]?.notes.contains(where: { $0.contains("кэш macOS") }) == true)
+        var mac = Battery(id: "mac", name: "Test Mac", model: "TestModel", connection: "Этот Mac")
+        mac.external = false; mac.charging = false
+        mac.date = Date().addingTimeInterval(-10)
+        store.devices = [mac]
+        store.saveSyncSnapshots()
+        let count = store.history.count
+        mac.date = Date().addingTimeInterval(-5)
+        mac.external = true; mac.charging = true
+        store.devices = [mac]
+        store.saveSyncSnapshots()
+        precondition(store.history.count == count + 1)
+        mac.date = Date()
+        store.devices = [mac]
+        store.saveSyncSnapshots()
+        precondition(store.history.count == count + 1)
+        store.saveSyncSnapshots(force: true)
+        precondition(store.history.count == count + 2)
+        store.saveSyncSnapshots(force: true)
+        precondition(store.history.count == count + 2)
+        store.setSleeping(true)
+        mac.date = Date().addingTimeInterval(1)
+        store.devices = [mac]
+        store.saveSyncSnapshots(force: true)
+        precondition(store.history.count == count + 2)
+        print("PASS: power changes bypass interval; manual snapshot is fresh and deduplicated; sleep blocks writes")
         print("PASS: accessory technical snapshot follows new macOS data; missing fields are not carried forward")
         print("PASS: sleep removes timers; all refresh paths blocked; wake schedules future intervals without catch-up")
     }

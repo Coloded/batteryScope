@@ -51,8 +51,22 @@ extension Store {
             NSWorkspace.shared.open(folder)
         } catch { self.error = error.localizedDescription }
     }
-    func syncHistory() async {
-        guard !sleeping, historySyncEnabled, !syncBusy, let database else { return }
+    func saveSyncSnapshots(force: Bool = false) {
+        guard !sleeping else { return }
+        for device in devices where device.isLive && Date().timeIntervalSince(device.date) < 300 {
+            let last = history.filter { $0.battery.id == device.id }.max { $0.battery.date < $1.battery.date }?.battery
+            guard last == nil || device.date > last!.date else { continue }
+            if force || last == nil || device.date.timeIntervalSince(last!.date) >= 300
+                || last?.external != device.external || last?.charging != device.charging
+                || last?.summary != device.summary || last?.hasInternalBattery != device.hasInternalBattery {
+                save(device)
+            }
+        }
+    }
+    func syncHistory(forceSnapshot: Bool = false) async {
+        guard !sleeping, historySyncEnabled, let database else { return }
+        saveSyncSnapshots(force: forceSnapshot)
+        if syncBusy { syncRestartRequested = true; return }
         syncBusy = true; lastSyncAttempt = Date()
         syncRestartRequested = false
         let generation = syncGeneration
@@ -77,14 +91,6 @@ extension Store {
                 if stale { throw ReaderError.message("Доступ к папке изменился. Выберите её заново в настройках.") }
             }
             syncStatus = "Читаем и записываем файлы общей истории…"
-            // Publish current local measurements before exchanging, rather than
-            // waiting for the hourly historical sampling interval.
-            for device in devices where device.isLive && Date().timeIntervalSince(device.date) < 300 {
-                let last = history.filter { $0.battery.id == device.id }.max { $0.battery.date < $1.battery.date }?.battery
-                if last == nil || device.date.timeIntervalSince(last!.date) >= 300 || last?.summary != device.summary || last?.hasInternalBattery != device.hasInternalBattery {
-                    save(device)
-                }
-            }
             let snapshots = history, macID = LocalMacIdentity.id, macName = LocalMacIdentity.name
             let worker = Task.detached(priority: .utility) {
                 try HistoryFolderSync.exchange(folder: folder, samples: snapshots, macID: macID, macName: macName)
