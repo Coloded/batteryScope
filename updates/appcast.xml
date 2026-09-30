@@ -3,22 +3,22 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.7.4</title>
-            <pubDate>Wed, 30 Sep 2026 13:15:59 +0300</pubDate>
+            <title>0.7.5</title>
+            <pubDate>Wed, 30 Sep 2026 13:24:56 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>15</sparkle:version>
-            <sparkle:shortVersionString>0.7.4</sparkle:shortVersionString>
+            <sparkle:version>16</sparkle:version>
+            <sparkle:shortVersionString>0.7.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.4
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.5
 
-- Понятные подписи: «Потребление», «Зарядка» или «Разряд», «Мощность адаптера сейчас».
-- Текущая мощность адаптера отделена от его заявленной мощности.
-- Мощность батареи берётся из телеметрии macOS вместе с входной мощностью и потреблением. Расчёт напряжение × ток используется как запасной вариант.
-- Устаревшее положительное показание зарядки после отключения питания не используется.
+- Графики обзора и истории используют единый компонент: плавная линия с заливкой, шкала значений слева, время и дата снизу.
+- Для всех показателей истории доступны периоды 24 часа, 7 дней и все измерения.
+- Наведение показывает точные время и значение с единицами. На коротких интервалах отображаются секунды.
+- Отсутствующие измерения и длительные перерывы остаются разрывами; отдельные измерения показаны точками.
 
 История и настройки сохраняются. Apple Silicon и Intel, macOS 13+.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.4/BatteryScope-stable.dmg" length="10640177" type="application/octet-stream" sparkle:edSignature="XIdyoqROMWsDHVfZxJVVuuU7Jj19vJB8evZVFKb4g033pzXHwMGrT6v3G4oM7O3V5g8pCcSK/9moUmK76hdWAw=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.5/BatteryScope-stable.dmg" length="10668963" type="application/octet-stream" sparkle:edSignature="RY7gOei9C1XbdmFltaHRQTZLckI1Nlzv3Hm/t5Z8l0t6ZO9XK4LHsCiPk64VXN79qfuAiA/OmUToYFBSBRY/Dw=="/>
         </item>
     </channel>
 </rss>
