@@ -9,7 +9,8 @@ def validate(app):
     for name in ['idevice_id','ideviceinfo','idevicediagnostics']:
         if not (helpers/name).is_file():raise ValueError('Missing helper: '+name)
     for binary in helpers.iterdir():
-        subprocess.run(['lipo',str(binary),'-verify_arch','arm64','x86_64'],check=True)
+        architectures = set(subprocess.check_output(['lipo', str(binary), '-archs'], text=True).split())
+        if not {'arm64', 'x86_64'} <= architectures: raise ValueError('Missing architecture: ' + str(binary))
         subprocess.run(['codesign','--verify','--strict',str(binary)],check=True,capture_output=True)
         for line in subprocess.check_output(['otool','-L',str(binary)],text=True).splitlines():
             if not line.startswith('\t'):continue

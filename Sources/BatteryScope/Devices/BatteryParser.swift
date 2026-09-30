@@ -19,6 +19,7 @@ enum BatteryParser {
         if b.full == nil, let max = number(d, "MaxCapacity"), max > 100 { b.full = max }
         if let raw = number(d, "AppleRawCurrentCapacity"), let full = b.full, full > 0 { b.percent = min(100, max(0, raw / full * 100)) }
         else if let current = number(d, "CurrentCapacity"), let max = number(d, "MaxCapacity"), max > 0 { b.percent = min(100, Swift.max(0, current / max * 100)) }
+        if let remaining = number(d, "AppleRawCurrentCapacity"), remaining.isFinite, remaining >= 0 { b.remainingCapacity = remaining }
         b.cycles = number(d, "CycleCount") ?? number(nested, "CycleCount")
         if let t = number(d, "Temperature"), t > 0 { b.temperature = t / 100 }
         if let v = number(d, "Voltage"), v > 0 { b.voltage = v / 1000 }

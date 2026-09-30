@@ -8,7 +8,8 @@ struct ObservationSeries: Identifiable {
     static func available(_ batteries: [Battery]) -> [ObservationSeries] {
         var all: [ObservationSeries] = [
             .init(id: "Заряд", unit: "%", read: { $0.percent }),
-            .init(id: "Состояние батареи", unit: "%", read: { $0.health }),
+            .init(id: "Максимальная ёмкость · macOS", unit: "%", read: { $0.validSystemMaximumCapacity }),
+            .init(id: "Максимальная ёмкость · оценка", unit: "%", read: { $0.validSystemMaximumCapacity == nil ? $0.health : nil }),
             .init(id: "Потребление системы", unit: "Вт", read: { $0.power?.systemWatts }),
             .init(id: "Входная мощность", unit: "Вт", read: { $0.power?.inputWatts }),
             .init(id: "Температура батареи", unit: "°C", read: { $0.temperature }),

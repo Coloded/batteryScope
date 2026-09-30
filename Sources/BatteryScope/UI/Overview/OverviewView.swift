@@ -36,10 +36,11 @@ struct OverviewView: View {
                 }
                 if !b.isAccessory && !b.isDesktop {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    if b.health != nil { metric("Состояние", b.value(b.health, suffix: "%", digits: 1), "Полная / проектная ёмкость") }
+                    if b.health != nil { metric("Максимальная ёмкость", b.value(b.health, suffix: "%", digits: 1), b.healthSource) }
                     if b.cycles != nil { metric("Циклы", b.value(b.cycles), "Полные циклы заряда") }
                     if b.temperature != nil { metric("Температура", b.value(b.temperature, suffix: " °C", digits: 1), "Датчик аккумулятора") }
-                    if b.full != nil { metric("Полная ёмкость", b.value(b.full, suffix: " мА·ч"), "Доступная сейчас") }
+                    if b.full != nil { metric("Полная ёмкость", b.value(b.full, suffix: " мА·ч"), "Оценка контроллера при полном заряде") }
+                    if b.remainingCapacity != nil { metric("Остаток заряда", b.value(b.remainingCapacity, suffix: " мА·ч"), "По данным контроллера") }
                     if b.design != nil { metric("Проектная ёмкость", b.value(b.design, suffix: " мА·ч"), "Номинал производителя") }
                     if b.watts != nil { metric("Поток батареи", b.value(b.watts, suffix: " Вт", digits: 1), "Напряжение × ток; знак датчика") }
                 }

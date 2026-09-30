@@ -3,25 +3,24 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.7.0</title>
-            <pubDate>Wed, 09 Sep 2026 18:08:57 +0300</pubDate>
+            <title>0.7.1</title>
+            <pubDate>Wed, 30 Sep 2026 12:06:30 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>11</sparkle:version>
-            <sparkle:shortVersionString>0.7.0</sparkle:shortVersionString>
+            <sparkle:version>12</sparkle:version>
+            <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.0
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.1
 
-- Компактный обзор с показателями, подходящими выбранному устройству. На настольных Mac — мощность, конфигурация и ядра CPU/GPU, когда система предоставляет их количество.
-- Единый обзор для локальных и облачных Mac с датой снимка. Новые снимки передают краткую конфигурацию; для этого обновите приложение на каждом Mac.
-- Аналитика и история по доступным измерениям: мощность Mac, заряд аксессуаров, отдельные наушники и кейс. Пустые показатели скрыты.
-- Характеристики в компактной таблице со сворачиваемыми разделами. Питание аксессуаров отделено от служебных событий драйвера.
-- Исправлено обновление характеристик Bluetooth-аксессуаров. Сохранённые показания macOS явно обозначены.
-- Предупреждения о снижении ёмкости аккумулятора и подтверждённых статусах обслуживания macOS. Недоступные данные не трактуются как исправность; низкий заряд не считается износом.
-- Сохранены автоматический опрос при бодрствовании и пауза работы во время сна.
+- Максимальная ёмкость аккумулятора больше не превышает 100%. На Mac предпочтение отдаётся показателю macOS; если он недоступен, показывается обозначенная оценка по ёмкостям.
+- Проектная и полная ёмкости в мА·ч сохранены. Остаток заряда показывается отдельно, когда доступен. Исходное отношение ёмкостей остаётся в подробностях и экспорте.
+- Исправлены подписи, аналитика и предупреждения об износе с учётом источника данных. Новые сведения передаются в истории iCloud.
+- Кнопка «Обновить» запускает включённый обмен историей без ожидания интервала. Перед обменом сохраняются свежие локальные снимки; доставка файлов зависит от iCloud.
+- Исправлено положение выпадающего списка при выборе нижнего устройства.
+- Обновлены Sparkle до 2.10.0, OpenSSL до 4.0.3 и libplist до 2.8.0, включая исправления безопасности.
 
-История SQLite сохраняется. Установщик не содержит личных данных. Apple Silicon и Intel, macOS 13+.
+История и настройки сохраняются. Обновите приложение на каждом Mac. Apple Silicon и Intel, macOS 13+.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.0/BatteryScope-stable.dmg" length="10542243" type="application/octet-stream" sparkle:edSignature="4aFT7Z5d3cahv7U6mEwnNr5r589tODIBElAxRxW5QzmeqlpWw2LKfyAtVe0Dyv1tfn5d0x0eGnVh32xtaI9cBw=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.1/BatteryScope-stable.dmg" length="10524485" type="application/octet-stream" sparkle:edSignature="uabvU0GCa72F3zHyZqbP+Rg/931mfy1eL3IvJd5Q7RyvabOKLfY6B+iFAhsvAH+RWl9xMqDWOHcmxD2a7baXBg=="/>
         </item>
     </channel>
 </rss>

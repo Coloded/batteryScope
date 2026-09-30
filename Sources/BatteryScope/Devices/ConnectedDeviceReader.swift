@@ -132,7 +132,16 @@ enum DeviceReader {
         async let accessoryResult = Task.detached(priority: .utility) {
             Command.$generation.withValue(generation) { bluetooth ? accessories() : ScanResult(devices: [], messages: []) }
         }.value
-        let local = BatteryReader.mac()
+        let local = await Task.detached(priority: .utility) {
+            Command.$generation.withValue(generation) {
+                var battery = BatteryReader.mac()
+                if battery.hasInternalBattery == true {
+                    MacHealthReader.refreshIfNeeded()
+                    MacHealthReader.apply(to: &battery)
+                }
+                return battery
+            }
+        }.value
         let (phones, peripherals) = await (mobileResult, accessoryResult)
         return ScanResult(devices: [local] + phones.devices + peripherals.devices, messages: phones.messages + peripherals.messages)
     }

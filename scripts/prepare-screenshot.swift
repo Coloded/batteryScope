@@ -32,6 +32,14 @@ if args.count == 7 {
     guard let cropped = image.cropping(to: CGRect(x:x,y:y,width:w,height:h)) else { fail("Cannot crop image.") }
     image = cropped
 }
+// Normalize HDR/10-bit HEIC pixels to 8-bit sRGB supported by PNG encoders.
+guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+      let context = CGContext(data: nil, width: image.width, height: image.height,
+          bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { fail("Cannot create RGB conversion buffer.") }
+context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+guard let normalized = context.makeImage() else { fail("Cannot normalize image.") }
+image = normalized
 do { try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true) }
 catch { fail(error.localizedDescription) }
 guard let destination = CGImageDestinationCreateWithURL(output as CFURL, UTType.png.identifier as CFString, 1, nil) else { fail("Cannot create output.") }

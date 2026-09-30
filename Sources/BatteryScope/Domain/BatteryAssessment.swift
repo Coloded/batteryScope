@@ -18,8 +18,8 @@ extension Battery {
         if batteryHealth == "Fair" {
             return BatteryAssessment(severity: 1, title: "Износ аккумулятора", reason: "macOS сообщает об ограниченной ёмкости аккумулятора.")
         }
-        if let health, health.isFinite, health > 0, health < 80 {
-            return BatteryAssessment(severity: 1, title: "Снижена ёмкость аккумулятора", reason: "Полная ёмкость составляет \(value(health, suffix: "%", digits: 1)) от проектной — ниже порога внимания 80%. Это оценка ёмкости, а не подтверждение неисправности.")
+        if let health, health.isFinite, health >= 0, health < 80 {
+            return BatteryAssessment(severity: 1, title: "Снижена ёмкость аккумулятора", reason: validSystemMaximumCapacity != nil ? "Максимальная ёмкость по macOS составляет \(value(health, suffix: "%", digits: 1)) — ниже порога внимания 80%." : "Полная ёмкость составляет \(value(health, suffix: "%", digits: 1)) от проектной — ниже порога внимания 80%. Это оценка ёмкости, а не подтверждение неисправности.")
         }
         return nil
     }

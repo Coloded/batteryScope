@@ -69,7 +69,7 @@ guard key.isValidSignature(signature, for: payload) else { fputs("Invalid Ed2551
                 require(embedded[key] == info[key], f"Bundle metadata differs: {key}")
             subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
             for binary in [app / "Contents/MacOS/BatteryScope", app / "Contents/Frameworks/Sparkle.framework/Versions/Current/Sparkle"]:
-                subprocess.run(["lipo", str(binary), "-verify_arch", "arm64", "x86_64"], check=True)
+                require({"arm64", "x86_64"} <= set(subprocess.check_output(["lipo", str(binary), "-archs"], text=True).split()), "Missing architecture: " + str(binary))
             spec = importlib.util.spec_from_file_location("manifest", ROOT / "scripts/build-manifest.py")
             module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
             require(json.loads((app / "Contents/Resources/BuildManifest.json").read_text()) == module.inputs(), "Bundle was built from different source")

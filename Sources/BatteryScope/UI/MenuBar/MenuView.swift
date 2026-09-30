@@ -12,7 +12,7 @@ struct MenuView: View {
                 if let warning = device.assessment { Label(device.name + ": " + warning.title, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange) }
             }
             Divider()
-            Button("Обновить") { Task { await store.refresh() } }.disabled(store.busy)
+            Button("Обновить") { Task { await store.refresh(forceSync: true) } }.disabled(store.busy)
             Button("Открыть BatteryScope") { NSApp.activate(ignoringOtherApps: true); if let window = NSApp.windows.first(where: { $0.title == "BatteryScope" }) { window.makeKeyAndOrderFront(nil) } else { openWindow(id: "main") } }
             Button("Проверить обновления…") { updates.check() }.disabled(!updates.canCheck)
             Button("Завершить") { NSApp.terminate(nil) }

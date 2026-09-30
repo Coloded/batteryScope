@@ -68,7 +68,7 @@ private struct NativeDeviceMenu: NSViewRepresentable {
     @Binding var selection: String
     func makeCoordinator() -> Coordinator { Coordinator(selection: $selection) }
     func makeNSView(context: Context) -> NSPopUpButton {
-        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        let button = NSPopUpButton(frame: .zero, pullsDown: true)
         button.controlSize = .large
         button.target = context.coordinator
         button.action = #selector(Coordinator.select(_:))
@@ -79,9 +79,14 @@ private struct NativeDeviceMenu: NSViewRepresentable {
     func updateNSView(_ button: NSPopUpButton, context: Context) {
         context.coordinator.selection = $selection
         button.removeAllItems()
+        // A pull-down menu anchors below the button, not at the selected row.
+        let current = items.first { $0.id == selection }
+        button.addItem(withTitle: current?.title ?? "Выбрать устройство")
+        button.item(at: 0)?.image = current?.deviceIcon
         for item in items {
             let menuItem = NSMenuItem(title: item.title, action: nil, keyEquivalent: "")
             menuItem.representedObject = item.id
+            menuItem.state = item.id == selection ? .on : .off
             menuItem.image = item.deviceIcon
             menuItem.toolTip = item.help
             if let symbol = item.trailingSymbol,
@@ -91,10 +96,11 @@ private struct NativeDeviceMenu: NSViewRepresentable {
                 attachment.attachmentCell = NSTextAttachmentCell(imageCell: image)
                 title.append(NSAttributedString(attachment: attachment))
                 menuItem.attributedTitle = title
+                if item.id == selection { button.item(at: 0)?.attributedTitle = title }
             }
             button.menu?.addItem(menuItem)
         }
-        if let index = items.firstIndex(where: { $0.id == selection }) { button.selectItem(at: index) }
+        button.selectItem(at: 0)
         button.isEnabled = !items.isEmpty
         button.toolTip = items.first(where: { $0.id == selection })?.help
     }

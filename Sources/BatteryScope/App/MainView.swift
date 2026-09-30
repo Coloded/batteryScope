@@ -21,7 +21,7 @@ struct MainView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) { Text(store.page).font(.system(size: 26, weight: .bold)); Text(store.current.map { "\($0.name) · \($0.model)" } ?? "Читаем устройства…").foregroundStyle(.secondary) }
                         Spacer()
-                        Button { Task { await store.refresh() } } label: { Label(store.busy ? "Обновление…" : "Обновить", systemImage: "arrow.clockwise") }.disabled(store.busy)
+                        Button { Task { await store.refresh(forceSync: true) } } label: { Label(store.busy ? "Обновление…" : "Обновить", systemImage: "arrow.clockwise") }.disabled(store.busy)
                     }
                     if let error = store.error { HStack { Text(error).foregroundStyle(.red); Spacer(); Button("Закрыть") { store.error = nil } }.padding().background(.red.opacity(0.06), in: RoundedRectangle(cornerRadius: 12)) }
                     if let device = store.current { BatteryAssessmentView(device: device) }

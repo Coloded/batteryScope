@@ -85,7 +85,7 @@ def embed(app):
         if name in libs:subprocess.run(['install_name_tool','-id','@loader_path/'+name,str(output)],check=True,capture_output=True)
         subprocess.run(['codesign','--force','--sign','-',str(output)],check=True,capture_output=True)
     licenses=app/'Contents/Resources/MobileDevice-Licenses.txt'
-    text=['BatteryScope mobile helpers: unmodified upstream source releases.\nSource archives and build script: https://github.com/Coloded/batteryScope/releases/download/v0.6.0/BatteryScope-mobile-sources.tar\nDynamic libraries are separately replaceable. No hardened library validation is enabled.\n']
+    text=['BatteryScope mobile helpers: unmodified upstream source releases.\nSource archives and build script: https://github.com/Coloded/batteryScope/releases/download/v0.7.1/BatteryScope-mobile-sources.tar\nDynamic libraries are separately replaceable. No hardened library validation is enabled.\n']
     for item in LOCK:
         source=CACHE/'arm64'/item['directory']
         text.append('\n=== '+item['name']+' '+item['version']+' ===\n'+item['url']+'\n')

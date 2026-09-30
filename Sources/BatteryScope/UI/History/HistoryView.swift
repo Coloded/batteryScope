@@ -6,7 +6,7 @@ struct HistoryView: View {
     @State private var selectedMetric = "Заряд"
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Снимки сохраняются автоматически раз в час, пока приложение запущено, и вручную кнопкой в обзоре.").foregroundStyle(.secondary)
+            Text("Снимки сохраняются раз в час, перед обменом iCloud при обновлении данных и вручную в обзоре.").foregroundStyle(.secondary)
             if store.samples.isEmpty { empty("История пока пуста", "Сохраните первый снимок в обзоре. Снимки сохраняются отдельно для каждого устройства.") }
             else {
                 let choices = ObservationSeries.available(store.samples.map(\.battery))

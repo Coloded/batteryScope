@@ -29,6 +29,7 @@ enum BatteryReader {
                 b.minutes = (desc[timeKey] as? NSNumber).flatMap { $0.doubleValue > 0 ? $0.doubleValue : nil }
             }
         }
+        if hasInternalBattery { MacHealthReader.apply(to: &b) }
         b.summary = DeviceSummary.local()
         b.hasInternalBattery = hasInternalBattery
         b.power = PowerReadings.read(d, external: b.external)

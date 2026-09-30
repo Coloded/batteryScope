@@ -15,7 +15,9 @@ app="$build_dir/BatteryScope.app"
 # Stage on a macOS filesystem: framework symlinks must survive packaging.
 if [ -d "$app" ]; then mv "$app" "$build_dir/previous-app-$(date +%s)-$$"; fi
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
-lipo -create "$build_dir/arm64/arm64-apple-macosx/release/BatteryScope" "$build_dir/x86_64/x86_64-apple-macosx/release/BatteryScope" -output "$app/Contents/MacOS/BatteryScope"
+arm_bin="$(swift build -c release --arch arm64 --scratch-path "$build_dir/arm64" --show-bin-path)"
+intel_bin="$(swift build -c release --arch x86_64 --scratch-path "$build_dir/x86_64" --show-bin-path)"
+lipo -create "$arm_bin/BatteryScope" "$intel_bin/BatteryScope" -output "$app/Contents/MacOS/BatteryScope"
 cp Info.plist "$app/Contents/Info.plist"
 if [ ! -f Assets/AppIcon.icns ] || [ Assets/AppIcon.png -nt Assets/AppIcon.icns ]; then bash scripts/icon.sh; fi
 cp Assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
@@ -27,5 +29,9 @@ python3 scripts/check-private-data.py --app "$app"
 codesign --force --sign - "$app"
 codesign --verify --deep --strict "$app"
 python3 scripts/validate-mobile.py "$app"
-lipo "$app/Contents/MacOS/BatteryScope" -verify_arch arm64 x86_64
+python3 - "$app/Contents/MacOS/BatteryScope" <<'PYCODE'
+import subprocess, sys
+architectures = set(subprocess.check_output(["lipo", sys.argv[1], "-archs"], text=True).split())
+if not {"arm64", "x86_64"} <= architectures: raise SystemExit("Missing app architecture")
+PYCODE
 echo "Собрано: $app"

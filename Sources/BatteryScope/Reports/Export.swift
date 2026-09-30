@@ -11,11 +11,11 @@ enum Export {
     static func csv(_ samples: [Sample]) -> String {
         func field(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
         func n(_ v: Double?) -> String { v.map { String($0) } ?? "" }
-        let header = "date,device,model,connection,charge_percent,health_percent,full_mAh,design_mAh,cycles,temperature_C,voltage_V,current_mA,components,device_id,source_mac_id,source_mac_name,battery_flow_W,input_W,system_W,adapter_rating_W,current_source\n"
+        let header = "date,device,model,connection,charge_percent,health_percent,full_mAh,design_mAh,cycles,temperature_C,voltage_V,current_mA,components,device_id,source_mac_id,source_mac_name,battery_flow_W,input_W,system_W,adapter_rating_W,current_source,health_source,raw_capacity_ratio_percent,remaining_mAh\n"
         return header + samples.map { s in
             let b = s.battery
             let components = (b.components ?? [:]).keys.sorted().map { "\($0)=\(n(b.components?[$0]))" }.joined(separator: "; ")
-            return [ISO8601DateFormatter().string(from: b.date), b.name, b.model, b.connection, n(b.percent), n(b.health), n(b.full), n(b.design), n(b.cycles), n(b.temperature), n(b.voltage), n(b.amperage), components, b.id, s.sourceMacID ?? "", s.sourceMacName ?? "", n(b.watts), n(b.power?.inputWatts), n(b.power?.systemWatts), n(b.power?.adapterRatingWatts), b.currentSource ?? ""].map(field).joined(separator: ",")
+            return [ISO8601DateFormatter().string(from: b.date), b.name, b.model, b.connection, n(b.percent), n(b.health), n(b.full), n(b.design), n(b.cycles), n(b.temperature), n(b.voltage), n(b.amperage), components, b.id, s.sourceMacID ?? "", s.sourceMacName ?? "", n(b.watts), n(b.power?.inputWatts), n(b.power?.systemWatts), n(b.power?.adapterRatingWatts), b.currentSource ?? "", b.healthSource, n(b.rawCapacityRatio), n(b.remainingCapacity)].map(field).joined(separator: ",")
         }.joined(separator: "\n")
     }
     static func escape(_ s: String) -> String { s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;") }
@@ -35,7 +35,7 @@ extension Battery {
     func value(_ n: Double?, suffix: String = "", digits: Int = 0) -> String { n.map { String(format: "%.*f", digits, $0) + suffix } ?? "—" }
     var state: String { if !isLive { return "Нет свежих данных" }; if components?.isEmpty == false && percent == nil { return "Подключено" }; if charging == true { return "Заряжается" }; if external == true { return "Питание подключено" }; if percent != nil { return "От аккумулятора" }; return "Нет данных батареи" }
     var metrics: [(String, String)] { [
-        ("Заряд", value(percent, suffix: "%")), ("Состояние батареи", value(health, suffix: "%", digits: 1)),
+        ("Заряд", value(percent, suffix: "%")), ("Максимальная ёмкость · " + healthSource, value(health, suffix: "%", digits: 1)), ("Отношение полной ёмкости к проектной (исходное)", value(rawCapacityRatio, suffix: "%", digits: 1)), ("Остаток заряда", value(remainingCapacity, suffix: " мА·ч")),
         ("Полная ёмкость", value(full, suffix: " мА·ч")), ("Проектная ёмкость", value(design, suffix: " мА·ч")),
         ("Циклы", value(cycles)), ("Температура", value(temperature, suffix: " °C", digits: 1)),
         ("Напряжение", value(voltage, suffix: " В", digits: 2)), ("Ток", value(amperage, suffix: " мА")),

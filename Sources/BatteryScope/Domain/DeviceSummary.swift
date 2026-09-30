@@ -37,7 +37,9 @@ enum DeviceSummary {
             if let value { values[key] = b.value(value, suffix: unit, digits: digits) }
         }
         add("Заряд", b.percent, "%", digits: 0)
-        add("Состояние аккумулятора", b.health, "%")
+        add("Максимальная ёмкость · " + b.healthSource, b.health, "%")
+        add("Отношение полной ёмкости к проектной (исходное)", b.rawCapacityRatio, "%")
+        add("Остаток заряда", b.remainingCapacity, " мА·ч", digits: 0)
         add("Циклы", b.cycles, "", digits: 0)
         add("Полная ёмкость", b.full, " мА·ч", digits: 0)
         add("Проектная ёмкость", b.design, " мА·ч", digits: 0)
@@ -51,6 +53,7 @@ enum DeviceSummary {
         for (key, value) in b.components ?? [:] { add(key, value, "%", digits: 0) }
         if let charging = b.charging { values["Заряжается"] = charging ? "Да" : "Нет" }
         if let external = b.external { values["Внешнее питание"] = external ? "Да" : "Нет" }
+        if let date = b.systemMaximumCapacityDate { values["Время чтения максимальной ёмкости macOS"] = date.formatted() }
         values["Состояние батареи по macOS"] = b.batteryHealth
         values["Условие обслуживания по macOS"] = b.batteryCondition
         return values

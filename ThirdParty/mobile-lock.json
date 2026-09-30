@@ -1,17 +1,17 @@
 [
   {
     "name": "openssl",
-    "version": "4.0.2",
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz",
-    "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
-    "directory": "openssl-4.0.2"
+    "version": "4.0.3",
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
+    "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+    "directory": "openssl-4.0.3"
   },
   {
     "name": "libplist",
-    "version": "2.7.0",
-    "url": "https://github.com/libimobiledevice/libplist/releases/download/2.7.0/libplist-2.7.0.tar.bz2",
-    "sha256": "7ac42301e896b1ebe3c654634780c82baa7cb70df8554e683ff89f7c2643eb8b",
-    "directory": "libplist-2.7.0"
+    "version": "2.8.0",
+    "url": "https://github.com/libimobiledevice/libplist/releases/download/2.8.0/libplist-2.8.0.tar.bz2",
+    "sha256": "b1f59f7634c58b2481325a23ff4e3bf51574a42d868cbe466d2b39b04550752a",
+    "directory": "libplist-2.8.0"
   },
   {
     "name": "libimobiledevice-glue",

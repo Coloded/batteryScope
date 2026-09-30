@@ -11,6 +11,7 @@ test_sources=(
   Sources/BatteryScope/Domain/PowerReadings.swift
   Sources/BatteryScope/Infrastructure/SystemCommand.swift
   Sources/BatteryScope/Devices/BatteryParser.swift
+  Sources/BatteryScope/Devices/MacHealthReader.swift
   Sources/BatteryScope/Devices/MacBatteryReader.swift
   Sources/BatteryScope/Reports/Export.swift
   Sources/BatteryScope/Devices/ConnectedDeviceReader.swift

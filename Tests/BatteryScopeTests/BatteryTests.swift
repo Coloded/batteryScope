@@ -38,7 +38,8 @@ import Foundation
         suite.testCloudPlaceholderResolution()
         suite.testObservationSeriesByDevice()
         suite.testBatteryWearAssessment()
-        print("PASS: 35 tests (battery, SQLite, technical data, Russian labels, units, exports)")
+        try suite.testSystemHealthAndRawCapacity()
+        print("PASS: 36 tests (battery, SQLite, technical data, Russian labels, units, exports)")
         if CommandLine.arguments.contains("--live-devices") {
             let phones = DeviceReader.mobile(network: true)
             XCTAssertTrue(phones.messages.isEmpty)
@@ -54,6 +55,35 @@ import Foundation
             XCTAssertTrue(peripherals.messages.isEmpty)
             for b in peripherals.devices { print("ACCESSORY: \(b.model), live \(b.isLive), charge \(b.value(b.percent))") }
         }
+    }
+    func testSystemHealthAndRawCapacity() throws {
+        var battery = parse(["AppleRawMaxCapacity": 5300, "DesignCapacity": 5000, "AppleRawCurrentCapacity": 1700])
+        XCTAssertEqual(battery.health, 100)
+        XCTAssertEqual(battery.rawCapacityRatio, 106)
+        XCTAssertEqual(battery.remainingCapacity, 1700)
+        battery.systemMaximumCapacity = 92
+        battery.systemMaximumCapacityDate = Date()
+        XCTAssertEqual(battery.health, 92)
+        XCTAssertEqual(battery.healthSource, "По данным macOS")
+        battery.full = 3000
+        XCTAssertTrue(battery.assessment == nil)
+        battery.systemMaximumCapacity = 70
+        XCTAssertTrue(battery.assessment?.reason.contains("macOS") == true)
+        battery.systemMaximumCapacity = 120
+        XCTAssertEqual(battery.health, 60)
+        battery.systemMaximumCapacity = nil; battery.full = .infinity
+        XCTAssertTrue(battery.health == nil)
+        battery.full = 5300; battery.systemMaximumCapacity = 92
+        let sample = Sample(battery: battery)
+        let envelope = HistoryEnvelope.outgoing(sample, macID: "synthetic-source", macName: "Synthetic Mac")
+        let decoded = try JSONDecoder().decode(HistoryEnvelope.self, from: JSONEncoder().encode(envelope)).incoming(on: "synthetic-target")
+        XCTAssertEqual(decoded.battery.health, 92)
+        XCTAssertEqual(decoded.battery.rawCapacityRatio, 106)
+        XCTAssertEqual(decoded.battery.remainingCapacity, 1700)
+        XCTAssertEqual(MacHealthReader.parse(["SPPowerDataType": [["sppower_battery_health_info": ["sppower_battery_health_maximum_capacity": "93 %"]]]]), 93)
+        XCTAssertTrue(MacHealthReader.parse(["sppower_battery_charge_info": ["sppower_battery_max_capacity": 100]]) == nil)
+        XCTAssertTrue(MacHealthReader.parse(["sppower_battery_health_info": ["sppower_battery_health_maximum_capacity": "105%"]]) == nil)
+        XCTAssertTrue(Export.csv([sample]).contains("health_source,raw_capacity_ratio_percent,remaining_mAh"))
     }
     func testBatteryWearAssessment() {
         var b = Battery(id: "mac", name: "Synthetic Laptop", model: "Laptop", connection: "Local")
@@ -90,7 +120,7 @@ import Foundation
         pods.components = nil
         XCTAssertTrue(ObservationSeries.available([pods]).isEmpty)
         var laptop = desktop; laptop.percent = 90; laptop.full = 4500; laptop.design = 5000
-        XCTAssertTrue(ObservationSeries.available([laptop]).contains { $0.id == "Состояние батареи" })
+        XCTAssertTrue(ObservationSeries.available([laptop]).contains { $0.id == "Максимальная ёмкость · оценка" })
         laptop.percent = .nan
         XCTAssertTrue(!ObservationSeries.available([laptop]).contains { $0.id == "Заряд" })
     }

@@ -69,7 +69,7 @@ import AppKit
     var knownDevices: [Battery] {
         var result = devices
         var seen = Set(devices.map(\.id))
-        for sample in history.reversed() where seen.insert(sample.battery.id).inserted {
+        for sample in history.sorted(by: { $0.battery.date > $1.battery.date }) where seen.insert(sample.battery.id).inserted {
             var archived = sample.battery
             archived.available = false
             archived.connection = sample.sourceMacID.map { $0 != LocalMacIdentity.id } == true ? "Из iCloud" : "Сохранённые данные"
@@ -97,7 +97,7 @@ import AppKit
         configurePolling()
     }
 
-    func refresh() async {
+    func refresh(forceSync: Bool = false) async {
         guard !sleeping, !busy else { return }; busy = true
         let generation = workGeneration
         defer { busy = false }
@@ -118,7 +118,7 @@ import AppKit
                 catch { self.error = error.localizedDescription }
             }
         }
-        if !sleeping && historySyncEnabled && Date().timeIntervalSince(lastSyncAttempt) >= 300 {
+        if !sleeping && historySyncEnabled && (forceSync || Date().timeIntervalSince(lastSyncAttempt) >= 300) {
             await syncHistory()
         }
     }
