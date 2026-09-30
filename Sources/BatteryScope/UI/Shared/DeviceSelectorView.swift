@@ -17,12 +17,23 @@ struct DeviceSelectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("УСТРОЙСТВО").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-            NativeDeviceMenu(items: store.knownDevices.map { device in
-                DeviceMenuItem(id: device.id, title: (device.assessment == nil ? "" : "⚠︎ ") + (historyLabel(device) == nil ? deviceMenuTitle(device) : device.name),
-                               deviceIcon: device.deviceIcon, trailingSymbol: historyLabel(device)?.symbol,
-                               help: historyLabel(device)?.help ?? device.connection)
-            }, selection: $store.selected)
-            .frame(height: 28)
+            ZStack {
+                NativeDeviceMenu(items: store.knownDevices.map { device in
+                    DeviceMenuItem(id: device.id, title: (device.assessment == nil ? "" : "⚠︎ ") + (historyLabel(device) == nil ? deviceMenuTitle(device) : device.name),
+                                   deviceIcon: device.deviceIcon, trailingSymbol: historyLabel(device)?.symbol,
+                                   help: historyLabel(device)?.help ?? device.connection)
+                }, selection: $store.selected)
+                HStack(spacing: 7) {
+                    if let device = store.current {
+                        Image(nsImage: device.deviceIcon).resizable().scaledToFit().frame(width: 20, height: 20)
+                        Text(device.name).lineLimit(1).truncationMode(.tail)
+                        if device.assessment != nil { Image(systemName: "exclamationmark.triangle") }
+                        Spacer(minLength: 0)
+                        if let history = historyLabel(device) { Image(systemName: history.symbol).font(.caption) }
+                    } else { Text("Выбрать устройство"); Spacer() }
+                    Image(systemName: "chevron.down").font(.caption)
+                }.padding(.horizontal, 10).allowsHitTesting(false)
+            }.frame(height: 34)
             .help(store.current.flatMap(historyLabel)?.help ?? store.current?.name ?? "Выбрать устройство")
             if let device = store.current {
                 HStack {
@@ -67,24 +78,22 @@ private struct NativeDeviceMenu: NSViewRepresentable {
     let items: [DeviceMenuItem]
     @Binding var selection: String
     func makeCoordinator() -> Coordinator { Coordinator(selection: $selection) }
-    func makeNSView(context: Context) -> NSPopUpButton {
-        let button = NSPopUpButton(frame: .zero, pullsDown: true)
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: "", target: nil, action: nil)
+        button.bezelStyle = .rounded
         button.controlSize = .large
         button.target = context.coordinator
-        button.action = #selector(Coordinator.select(_:))
+        button.action = #selector(Coordinator.open(_:))
         button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         button.setAccessibilityLabel("Выбрать устройство")
         return button
     }
-    func updateNSView(_ button: NSPopUpButton, context: Context) {
+    func updateNSView(_ button: NSButton, context: Context) {
         context.coordinator.selection = $selection
-        button.removeAllItems()
-        // A pull-down menu anchors below the button, not at the selected row.
-        let current = items.first { $0.id == selection }
-        button.addItem(withTitle: current?.title ?? "Выбрать устройство")
-        button.item(at: 0)?.image = current?.deviceIcon
+        let menu = NSMenu()
         for item in items {
-            let menuItem = NSMenuItem(title: item.title, action: nil, keyEquivalent: "")
+            let menuItem = NSMenuItem(title: item.title, action: #selector(Coordinator.select(_:)), keyEquivalent: "")
+            menuItem.target = context.coordinator
             menuItem.representedObject = item.id
             menuItem.state = item.id == selection ? .on : .off
             menuItem.image = item.deviceIcon
@@ -96,19 +105,22 @@ private struct NativeDeviceMenu: NSViewRepresentable {
                 attachment.attachmentCell = NSTextAttachmentCell(imageCell: image)
                 title.append(NSAttributedString(attachment: attachment))
                 menuItem.attributedTitle = title
-                if item.id == selection { button.item(at: 0)?.attributedTitle = title }
             }
-            button.menu?.addItem(menuItem)
+            menu.addItem(menuItem)
         }
-        button.selectItem(at: 0)
+        context.coordinator.menu = menu
         button.isEnabled = !items.isEmpty
         button.toolTip = items.first(where: { $0.id == selection })?.help
     }
     final class Coordinator: NSObject {
         var selection: Binding<String>
         init(selection: Binding<String>) { self.selection = selection }
-        @objc func select(_ sender: NSPopUpButton) {
-            if let id = sender.selectedItem?.representedObject as? String { selection.wrappedValue = id }
+        var menu = NSMenu()
+        @objc func open(_ sender: NSButton) {
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: sender)
+        }
+        @objc func select(_ sender: NSMenuItem) {
+            if let id = sender.representedObject as? String { selection.wrappedValue = id }
         }
     }
 }

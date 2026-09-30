@@ -3,24 +3,22 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.7.1</title>
-            <pubDate>Wed, 30 Sep 2026 12:06:30 +0300</pubDate>
+            <title>0.7.2</title>
+            <pubDate>Wed, 30 Sep 2026 12:28:35 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>12</sparkle:version>
-            <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>0.7.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.1
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.2
 
-- Максимальная ёмкость аккумулятора больше не превышает 100%. На Mac предпочтение отдаётся показателю macOS; если он недоступен, показывается обозначенная оценка по ёмкостям.
-- Проектная и полная ёмкости в мА·ч сохранены. Остаток заряда показывается отдельно, когда доступен. Исходное отношение ёмкостей остаётся в подробностях и экспорте.
-- Исправлены подписи, аналитика и предупреждения об износе с учётом источника данных. Новые сведения передаются в истории iCloud.
-- Кнопка «Обновить» запускает включённый обмен историей без ожидания интервала. Перед обменом сохраняются свежие локальные снимки; доставка файлов зависит от iCloud.
-- Исправлено положение выпадающего списка при выборе нижнего устройства.
-- Обновлены Sparkle до 2.10.0, OpenSSL до 4.0.3 и libplist до 2.8.0, включая исправления безопасности.
+- Исправлено наложение названия устройства и значка истории в боковой панели. Название и значки имеют отдельные места; длинные имена сокращаются внутри кнопки.
+- График мощности теперь показывает плавную линию с заливкой, время по горизонтали и мощность в ваттах по вертикали. Для периодов в несколько дней добавлена дата.
+- Для сохранённой истории доступны периоды 24 часа, 7 дней и все снимки.
+- При наведении курсора видны точные время и значение. Пропуски измерений не соединяются линией; одиночные измерения остаются точками.
 
-История и настройки сохраняются. Обновите приложение на каждом Mac. Apple Silicon и Intel, macOS 13+.
+История, настройки и автоматический обмен сохраняются. Apple Silicon и Intel, macOS 13+.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.1/BatteryScope-stable.dmg" length="10524485" type="application/octet-stream" sparkle:edSignature="uabvU0GCa72F3zHyZqbP+Rg/931mfy1eL3IvJd5Q7RyvabOKLfY6B+iFAhsvAH+RWl9xMqDWOHcmxD2a7baXBg=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.2/BatteryScope-stable.dmg" length="10611587" type="application/octet-stream" sparkle:edSignature="9HkmeGDVqUa0d7dG6gCHx72avjwsc0rYT3XpmbC9HJ7ZKEkhKO4aQZF531NcUnf3tv5HifbUXfH1HSPFYxPYCw=="/>
         </item>
     </channel>
 </rss>
