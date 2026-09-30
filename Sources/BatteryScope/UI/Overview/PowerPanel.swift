@@ -32,9 +32,9 @@ struct PowerPanel: View {
                 }.font(.caption)
                 }
                 Picker("График мощности", selection: $series) {
-                    Text("Вход от адаптера").tag("Вход от адаптера")
-                    if !device.isDesktop { Text("Поток батареи").tag("Поток батареи") }
-                    Text("Потребление системы").tag("Потребление системы")
+                    Text("Мощность адаптера").tag("Вход от адаптера")
+                    if !device.isDesktop { Text("Зарядка / разряд").tag("Поток батареи") }
+                    Text("Потребление").tag("Потребление системы")
                 }.pickerStyle(.segmented).labelsHidden()
                 if !(device.id == "mac" && device.isLive) {
                     Picker("Период", selection: $historyHours) {

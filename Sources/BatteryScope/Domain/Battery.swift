@@ -52,6 +52,18 @@ struct Battery: Codable, Identifiable {
     var health: Double? { validSystemMaximumCapacity ?? rawCapacityRatio.map { min(100, max(0, $0)) } }
     var healthSource: String { validSystemMaximumCapacity != nil ? "По данным macOS" : "Оценка по ёмкостям, не более 100%" }
 
-    var watts: Double? { guard let voltage, let amperage, voltage.isFinite, amperage.isFinite, abs(amperage) <= 20000 else { return nil }; return voltage * amperage / 1000 }
+    var watts: Double? {
+        // Prefer the same telemetry block as system/input power. Reject a cached
+        // charging value after unplugging; retain signed current as the fallback.
+        if let reported = power?.reportedBatteryWatts, reported.isFinite, abs(reported) <= 1000,
+           (reported > 0 && charging == true && external != false)
+            || (reported < 0 && charging != true)
+            || (reported == 0 && charging == false && external == true) {
+            return reported
+        }
+        guard let voltage, let amperage, voltage.isFinite, voltage > 0,
+              amperage.isFinite, abs(amperage) <= 20000 else { return nil }
+        return voltage * amperage / 1000
+    }
 
 }

@@ -21,12 +21,12 @@ struct OverviewPowerMetric: View {
     var body: some View {
         HStack(spacing: 8) {
             if let watts = device.power?.systemWatts {
-                reading("Mac", watts: watts)
+                reading("Потребление", watts: watts)
                     .help("Потребление Mac по телеметрии контроллера, без потерь блока питания")
             }
             if let watts = device.watts {
-                reading(watts < 0 ? "Из батареи" : "В батарею", watts: abs(watts))
-                    .help("Мощность на аккумуляторе: напряжение × ток. При работе без адаптера может быть близка к потреблению Mac.")
+                reading(watts < 0 ? "Разряд" : "Зарядка", watts: abs(watts))
+                    .help("Мощность батареи по телеметрии macOS; при отсутствии согласованного показания — напряжение × ток.")
             }
         }.padding(8).background(.background, in: RoundedRectangle(cornerRadius: 10))
     }
@@ -36,5 +36,23 @@ struct OverviewPowerMetric: View {
             Text(device.value(watts, suffix: " Вт", digits: 1))
                 .font(.system(size: 17, weight: .semibold, design: .rounded)).lineLimit(1)
         }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct AdapterPowerMetric: View {
+    let device: Battery
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Мощность адаптера сейчас").font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(device.value(device.power?.inputWatts, suffix: " Вт", digits: 1))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                if let rating = device.power?.adapterRatingWatts {
+                    Text("Адаптер: " + device.value(rating, suffix: " Вт")).font(.caption2).foregroundStyle(.secondary)
+                }
+            }.lineLimit(1).minimumScaleFactor(0.8)
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
+            .background(.background, in: RoundedRectangle(cornerRadius: 10))
+            .help("Сейчас — фактическая входная мощность в Mac. Адаптер — заявленная мощность блока питания. Потребление из розетки здесь не измеряется.")
     }
 }

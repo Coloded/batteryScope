@@ -201,6 +201,17 @@ import Foundation
         XCTAssertEqual(b.power?.systemWatts, 16)
         XCTAssertEqual(b.power?.adapterRatingWatts, 96)
         XCTAssertEqual(b.currentSource, "InstantAmperage")
+        var charging = b
+        charging.charging = true
+        charging.amperage = 1500 // fallback is 18 W, telemetry is 24 W
+        XCTAssertEqual(charging.watts, 24)
+        charging.external = false; charging.charging = false; charging.amperage = -1000
+        XCTAssertEqual(charging.watts, -12) // stale positive telemetry must not imply charging
+        charging.power?.reportedBatteryWatts = -9
+        XCTAssertEqual(charging.watts, -9)
+        charging.power?.reportedBatteryWatts = .nan
+        XCTAssertEqual(charging.watts, -12)
+
         let disconnected = parse(["ExternalConnected": false, "PowerTelemetryData": ["SystemPowerIn": 40000]])
         XCTAssertNil(disconnected.power?.inputWatts)
     }

@@ -47,7 +47,7 @@ struct OverviewView: View {
                     if b.design != nil { overviewMetric("Проектная ёмкость", b.value(b.design, suffix: " мА·ч"), "Номинал производителя") }
                     if b.id == "mac" || b.id.hasPrefix("mac:") {
                         if b.power?.systemWatts != nil || b.watts != nil { OverviewPowerMetric(device: b) }
-                        if let watts = b.power?.inputWatts { overviewMetric("От адаптера", b.value(watts, suffix: " Вт", digits: 1), "Измеренная входная мощность") }
+                        if b.power?.inputWatts != nil || b.power?.adapterRatingWatts != nil { AdapterPowerMetric(device: b) }
                     }
                 }
                 }

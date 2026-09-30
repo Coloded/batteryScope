@@ -3,23 +3,22 @@
     <channel>
         <title>BatteryScope</title>
         <item>
-            <title>0.7.3</title>
-            <pubDate>Wed, 30 Sep 2026 13:04:00 +0300</pubDate>
+            <title>0.7.4</title>
+            <pubDate>Wed, 30 Sep 2026 13:15:59 +0300</pubDate>
             <link>https://github.com/Coloded/batteryScope</link>
-            <sparkle:version>14</sparkle:version>
-            <sparkle:shortVersionString>0.7.3</sparkle:shortVersionString>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>0.7.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.3
+            <description sparkle:format="markdown"><![CDATA[# BatteryScope 0.7.4
 
-- Компактный обзор для небольших экранов: питание в общей сетке карточек, экспорт в меню «…», график целиком виден в уменьшенном окне.
-- Потребление Mac и мощность на батарее объединены в одну карточку с отдельными подписями.
-- Подключение и отключение питания, начало и завершение зарядки запускают обмен iCloud без ожидания планового интервала.
-- Ручное обновление сохраняет свежий снимок; чтение облачной истории начинается до опроса периферии.
-- Запрос обмена во время текущей синхронизации ставится на повтор. Во сне опрос и обмен остаются приостановлены.
+- Понятные подписи: «Потребление», «Зарядка» или «Разряд», «Мощность адаптера сейчас».
+- Текущая мощность адаптера отделена от его заявленной мощности.
+- Мощность батареи берётся из телеметрии macOS вместе с входной мощностью и потреблением. Расчёт напряжение × ток используется как запасной вариант.
+- Устаревшее положительное показание зарядки после отключения питания не используется.
 
-Доставка файлов между Mac зависит от iCloud. История и настройки сохраняются. Apple Silicon и Intel, macOS 13+.
+История и настройки сохраняются. Apple Silicon и Intel, macOS 13+.
 ]]></description>
-            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.3/BatteryScope-stable.dmg" length="10625621" type="application/octet-stream" sparkle:edSignature="N1HP/f/seIkdgAerZt3vyL4FH2FA16xxTOPRNjWEK2sABsjxdxYm0IpUyi4tIq2LAO7gtMyM24Aj2cCq6ZdCBQ=="/>
+            <enclosure url="https://github.com/Coloded/batteryScope/releases/download/v0.7.4/BatteryScope-stable.dmg" length="10640177" type="application/octet-stream" sparkle:edSignature="XIdyoqROMWsDHVfZxJVVuuU7Jj19vJB8evZVFKb4g033pzXHwMGrT6v3G4oM7O3V5g8pCcSK/9moUmK76hdWAw=="/>
         </item>
     </channel>
 </rss>
